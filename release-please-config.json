@@ -3,9 +3,13 @@
   "release-type": "node",
   "bootstrap-sha": "3c5e53f696509b5f7d9d13f4d2677beaf5168354",
   "separate-pull-requests": false,
+  "plugins": ["node-workspace"],
   "packages": {
     "packages/hugframe": {
       "component": "hugframe"
+    },
+    "packages/react": {
+      "component": "react"
     }
   }
 }

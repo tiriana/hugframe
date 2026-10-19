@@ -11,6 +11,7 @@
   },
   "workspaces": [
     "packages/hugframe",
+    "packages/react",
     "apps/site"
   ],
   "scripts": {
