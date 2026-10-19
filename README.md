@@ -7,7 +7,6 @@ No dependencies and no framework: plain TypeScript over DOM APIs, shipping its o
 
 1. [Live demo](https://tiriana.github.io/hugframe/) — the host page, the embedded app, the layout switcher and the host-driven height control.
 2. [API reference](https://tiriana.github.io/hugframe/api/)
-3. [Package on npm](https://www.npmjs.com/package/hugframe)
 
 ## What it does
 
