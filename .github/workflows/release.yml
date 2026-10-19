@@ -6,9 +6,12 @@ on:
       - main
 
 permissions:
+  # The release itself is created through the GitHub API, and the publish
+  # workflow is dispatched explicitly at the end of this job.
   contents: write
   issues: write
   pull-requests: write
+  actions: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -38,7 +41,28 @@ jobs:
       - name: Install release tooling
         run: npm ci
 
+      - name: Note the current release
+        id: before
+        run: echo "tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || echo none)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Release
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Note the new release
+        id: after
+        run: echo "tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || echo none)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A release created with the default GITHUB_TOKEN does not trigger the
+      # `release: published` event, so the publish workflow is dispatched here
+      # instead. workflow_dispatch is exempt from that restriction.
+      - name: Publish the new release
+        if: steps.after.outputs.tag != 'none' && steps.after.outputs.tag != steps.before.outputs.tag
+        run: gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --field tag="${{ steps.after.outputs.tag }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
