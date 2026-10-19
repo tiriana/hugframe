@@ -218,47 +218,78 @@ Two checks matter and both are enforced. The host verifies that `event.source` i
 `contentWindow` as well as the origin, and the framed document verifies the origin and its parent window.
 Trusting the `source` field inside the payload alone would be a security regression.
 
-## CSS custom properties
+## Appearance: parts, state attributes and the layered stylesheet
+
+The appearance API is three things: the four colour custom properties, the three
+engine-coupled custom properties, and the stable `data-hug-part` hooks on every
+element the engine generates. Every other visual value is a plain literal in the
+rule that already used it, and the whole stylesheet is wrapped in
+`@layer hugframe`.
+
+### Custom properties
 
 Set them on the root element — directly, or through `className`/`style`.
 
-| Token                                                  | Default                          | Purpose                                                                                                                                                                                                                                                |
-| ------------------------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--hug-duration`                                       | `460ms`                          | The morph.                                                                                                                                                                                                                                             |
-| `--hug-easing`                                         | `cubic-bezier(0.22, 1, 0.36, 1)` | The morph's easing.                                                                                                                                                                                                                                    |
-| `--hug-duration-fast`                                  | `300ms`                          | Radius, shadow and backdrop.                                                                                                                                                                                                                           |
-| `--hug-duration-content`                               | `260ms`                          | Content growth and the resize settle.                                                                                                                                                                                                                  |
-| `--hug-easing-content`                                 | `cubic-bezier(0.33, 1, 0.68, 1)` | The easing for content growth.                                                                                                                                                                                                                         |
-| `--hug-radius`                                         | `14px`                           | Inline corner radius.                                                                                                                                                                                                                                  |
-| `--hug-radius-expanded`                                | `0`                              | Corner radius once expanded; `0` gives the chromeless edge-to-edge look.                                                                                                                                                                               |
-| `--hug-border-width`                                   | `1px`                            | The hairline drawn as an inset ring, so it never eats layout.                                                                                                                                                                                          |
-| `--hug-shadow`                                         | a two-part soft shadow           | Inline elevation.                                                                                                                                                                                                                                      |
-| `--hug-shadow-expanded`                                | `none`                           | Elevation once expanded.                                                                                                                                                                                                                               |
-| `--hug-initial-height`                                 | `240px`                          | The height shown before the framed document first reports. The engine sets it; overriding it changes only the first paint.                                                                                                                             |
-| `--hug-z-index`                                        | `1000000000`                     | The expanded frame's stacking level. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the exported `HUGFRAME_Z_INDEX`. |
-| `--hug-surface`                                        | light: `#ffffff`                 | The frame's own background, so a box that is momentarily larger than the frame never shows the page through it.                                                                                                                                        |
-| `--hug-line`                                           | light: `#dfe3ea`                 | Hairline borders and dividers.                                                                                                                                                                                                                         |
-| `--hug-text`                                           | light: `#14171f`                 | The frame's text colour.                                                                                                                                                                                                                               |
-| `--hug-accent`                                         | `#4b46e0`                        | The focus ring.                                                                                                                                                                                                                                        |
-| `--hug-focus-ring-width`                               | `2px`                            | Focus ring width, on both the frame and the collapse control.                                                                                                                                                                                          |
-| `--hug-focus-ring-offset`                              | `-2px`                           | Focus ring offset on the frame, drawn inside it so a clipped box still shows it.                                                                                                                                                                       |
-| `--hug-backdrop`                                       | light: `rgb(12 15 24 / 44%)`     | The scrim behind the expanded frame.                                                                                                                                                                                                                   |
-| `--hug-backdrop-blur`                                  | `12px`                           | Blur applied to that scrim.                                                                                                                                                                                                                            |
-| `--hug-backdrop-saturate`                              | `0.82`                           | Saturation applied to that scrim.                                                                                                                                                                                                                      |
-| `--hug-glass`, `--hug-glass-hover`, `--hug-glass-line` | light translucent whites         | The expanded view's floating collapse control.                                                                                                                                                                                                         |
-| `--hug-collapse-offset`                                | `14px`                           | Inset of that control from the safe-area edges.                                                                                                                                                                                                        |
-| `--hug-collapse-size`                                  | `40px`                           | Its width and height.                                                                                                                                                                                                                                  |
-| `--hug-collapse-radius`                                | `999px`                          | Its corner radius; `999px` makes a pill.                                                                                                                                                                                                               |
-| `--hug-collapse-border-width`                          | `1px`                            | Its border width.                                                                                                                                                                                                                                      |
-| `--hug-collapse-z-index`                               | `2`                              | Its stacking level inside the frame.                                                                                                                                                                                                                   |
-| `--hug-collapse-blur`                                  | `10px`                           | Its own glass blur.                                                                                                                                                                                                                                    |
-| `--hug-collapse-saturate`                              | `1.1`                            | Its own glass saturation.                                                                                                                                                                                                                              |
-| `--hug-collapse-press-scale`                           | `0.94`                           | How far it shrinks while pressed.                                                                                                                                                                                                                      |
-| `--hug-collapse-focus-ring-offset`                     | `2px`                            | Focus ring offset on the control, drawn outside it.                                                                                                                                                                                                    |
-| `--hug-collapse-icon-size`                             | `18px`                           | Rendered size of the built-in collapse glyph.                                                                                                                                                                                                          |
-| `--hug-collapse-icon-stroke`                           | `1.6`                            | Stroke width of the built-in collapse glyph.                                                                                                                                                                                                           |
+| Token                  | Default                          | Kept because                                                                                                                                                                                                                                                                          |
+| ---------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--hug-z-index`        | `1000000000`                     | The engine reads it in `getZIndex()`, and the exported `HUGFRAME_Z_INDEX` must match it. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the export. |
+| `--hug-initial-height` | `240px`                          | The engine writes it on every height update, before the framed document first reports.                                                                                                                                                                                                |
+| `--hug-duration`       | `460ms`                          | The engine reads it to size the morph's `transitionend` fallback, and the morph transitions read it too, so one value drives both.                                                                                                                                                    |
+| `--hug-surface`        | light `#ffffff` / dark `#171a20` | The frame's own background, so a box that is momentarily larger than the frame never shows the page through it.                                                                                                                                                                       |
+| `--hug-text`           | light `#14171f` / dark `#ececea` | The frame's text colour, and the collapse glyph through `currentColor`.                                                                                                                                                                                                               |
+| `--hug-line`           | light `#dfe3ea` / dark `#2b2f38` | Hairline borders and dividers.                                                                                                                                                                                                                                                        |
+| `--hug-accent`         | light `#4b46e0` / dark `#9b94ff` | The focus ring.                                                                                                                                                                                                                                                                       |
 
-Every colour token has a dark-theme value under `prefers-color-scheme: dark`. Every visual value in the stylesheet is reachable this way, and each one maps one-to-one onto a prop a wrapper can forward; values that are structural rather than visual — `position`, `display`, `inset: 0`, `width`/`height: 100%`, `overflow`, `cursor`, `pointer-events`, the `opacity` and `visibility` show/hide states, and the transition property lists — are deliberately not tokens. `test/tokens.test.js` fails if a visual value is hardcoded, or if a token is declared that nothing reads.
+The four colour tokens carry a library-owned light/dark pair and are the documented
+colour path; the other three are coupled to the engine. These seven are the entire
+token surface.
+
+### Parts
+
+Every element the engine generates carries a `data-hug-part` attribute. It is the
+documented selector contract; the `.hug-*` classes remain on the same nodes, but new
+CSS should key off the part.
+
+| Part            | Element                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| `root`          | The outer element the engine renders.                            |
+| `backdrop`      | The scrim behind the expanded frame.                             |
+| `box`           | The clipped box that holds the frame.                            |
+| `frame`         | The `<iframe>`.                                                  |
+| `collapse`      | The library-owned slot that positions the expanded-mode control. |
+| `collapse-icon` | The built-in collapse glyph.                                     |
+
+The node inside the `collapse` slot is not the library's: it is the built-in button,
+or whatever `renderCollapse` returned (and nothing at all for `renderCollapse: null`).
+The slot owns where the control sits; the node owns what it is.
+
+State attributes sit on the root and are the other half of the contract: `data-mode`
+(`inline` / `expanded`), `data-phase` (`idle` / `expanding` / `collapsing` /
+`resizing`), `data-sizing` (`content` / `fixed`) and `data-ready`. The framed
+document receives `data-hug-sizing` on its own root.
+
+### `@layer` and overriding
+
+The whole stylesheet ships inside `@layer hugframe { … }`. An unlayered consumer rule
+therefore beats it whatever its specificity, so a consumer can override the expanded
+state with a plain rule and no `!important`: a `.hug-box { … }` in your own stylesheet
+wins over the library's `.hug-root[data-mode='expanded'] .hug-box`.
+
+### Example: restyling the collapse control
+
+The slot keeps the control's position; restyle the node inside it with ordinary,
+unlayered CSS:
+
+```css
+/* your stylesheet */
+[data-hug-part='collapse'] .hug-collapse {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+}
+```
 
 ## Layout rules for credible framing
 

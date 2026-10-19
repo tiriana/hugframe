@@ -54,6 +54,7 @@ function initialHeightToken(options: HugFrameOptions): string {
 
 function createDefaultCollapseIcon(): SVGElement {
   const svg = document.createElementNS(SVG_NAMESPACE, 'svg')
+  svg.setAttribute('data-hug-part', 'collapse-icon')
   svg.setAttribute('viewBox', '0 0 20 20')
   svg.setAttribute('width', '18')
   svg.setAttribute('height', '18')
@@ -91,22 +92,31 @@ export function buildCollapseAffordance(
 export function createHugFrameTemplate(options: HugFrameOptions): HugFrameTemplate {
   const root = document.createElement('div')
   root.className = composeRootClassName(options.className)
+  root.setAttribute('data-hug-part', 'root')
   applyElementStyle(root, options.style)
 
   const backdrop = document.createElement('div')
   backdrop.className = 'hug-backdrop'
+  backdrop.setAttribute('data-hug-part', 'backdrop')
   backdrop.setAttribute('aria-hidden', 'true')
 
   const box = document.createElement('div')
   box.className = 'hug-box'
+  box.setAttribute('data-hug-part', 'box')
 
   const iframe = document.createElement('iframe')
   iframe.src = options.src
   iframe.title = options.title
+  iframe.setAttribute('data-hug-part', 'frame')
 
   let title = options.title
   let appliedIframeProps: string[] = []
   let collapseNode: Node | null = null
+
+  // The library owns the control's position; the node shown inside it is either
+  // the built-in button or the consumer's `renderCollapse` output.
+  const collapseSlot = document.createElement('div')
+  collapseSlot.setAttribute('data-hug-part', 'collapse')
 
   function setInitialHeightToken(value: string): void {
     root.style.setProperty('--hug-initial-height', value)
@@ -168,7 +178,12 @@ export function createHugFrameTemplate(options: HugFrameOptions): HugFrameTempla
   function showCollapse(node: Node | null): void {
     if (collapseNode?.parentNode) collapseNode.parentNode.removeChild(collapseNode)
     collapseNode = node
-    if (node) box.appendChild(node)
+    if (!node) {
+      if (collapseSlot.parentNode) collapseSlot.parentNode.removeChild(collapseSlot)
+      return
+    }
+    collapseSlot.appendChild(node)
+    if (collapseSlot.parentNode !== box) box.appendChild(collapseSlot)
   }
 
   box.appendChild(iframe)

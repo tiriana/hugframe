@@ -1,198 +1,182 @@
-.hug-root {
-  /* The entire theme is configured in these two blocks — here and in the dark block below. */
-  /* Must match HUGFRAME_Z_INDEX in core.ts, and stay short: CSS minifiers round long numeric literals. */
-  --hug-z-index: 1000000000;
-  --hug-radius: 14px;
-  --hug-radius-expanded: 0;
-  --hug-border-width: 1px;
-  --hug-duration: 460ms;
-  --hug-easing: cubic-bezier(0.22, 1, 0.36, 1);
-  --hug-duration-fast: 300ms;
-  --hug-duration-content: 260ms;
-  --hug-easing-content: cubic-bezier(0.33, 1, 0.68, 1);
-  --hug-shadow: 0 1px 2px rgb(15 18 30 / 8%), 0 18px 40px -20px rgb(15 18 30 / 32%);
-  --hug-shadow-expanded: none;
-  --hug-line: #dfe3ea;
-  --hug-surface: #ffffff;
-  --hug-text: #14171f;
-  --hug-backdrop: rgb(12 15 24 / 44%);
-  --hug-backdrop-blur: 12px;
-  --hug-backdrop-saturate: 0.82;
-  --hug-glass: rgb(255 255 255 / 74%);
-  --hug-glass-line: rgb(15 18 30 / 12%);
-  --hug-glass-hover: rgb(255 255 255 / 94%);
-  --hug-accent: #4b46e0;
-  --hug-focus-ring-width: 2px;
-  --hug-focus-ring-offset: -2px;
-  --hug-collapse-offset: 14px;
-  --hug-collapse-z-index: 2;
-  --hug-collapse-size: 40px;
-  --hug-collapse-border-width: 1px;
-  --hug-collapse-radius: 999px;
-  --hug-collapse-blur: 10px;
-  --hug-collapse-saturate: 1.1;
-  --hug-collapse-press-scale: 0.94;
-  --hug-collapse-focus-ring-offset: 2px;
-  --hug-collapse-icon-size: 18px;
-  --hug-collapse-icon-stroke: 1.6;
-
-  position: relative;
-  width: 100%;
-  z-index: 0;
-  color: var(--hug-text);
-}
-
-@media (prefers-color-scheme: dark) {
+/* Everything lives in a named layer, so any unlayered consumer rule beats the
+   library regardless of specificity. That is what lets a plain `.hug-box { … }`
+   override the expanded state without `!important`. */
+@layer hugframe {
   .hug-root {
-    --hug-shadow: 0 1px 2px rgb(0 0 0 / 48%), 0 24px 60px -24px rgb(0 0 0 / 68%);
-    --hug-line: #2b2f38;
-    --hug-surface: #171a20;
-    --hug-text: #ececea;
-    --hug-backdrop: rgb(4 5 8 / 62%);
-    --hug-glass: rgb(28 31 38 / 68%);
-    --hug-glass-line: rgb(255 255 255 / 14%);
-    --hug-glass-hover: rgb(38 42 50 / 88%);
-    --hug-accent: #9b94ff;
+    /* Two of the seven public tokens are engine-coupled: --hug-z-index is read by
+       getZIndex() and must match HUGFRAME_Z_INDEX in core.ts, --hug-duration sizes
+       the morph's transitionend fallback. The engine also writes
+       --hug-initial-height. The four colour tokens are the documented appearance
+       path. Every other visual value is a plain literal in the rule that uses it;
+       the parts and state attributes below are the rest of the appearance API. */
+    /* Must match HUGFRAME_Z_INDEX in core.ts, and stay short: CSS minifiers round long numeric literals. */
+    --hug-z-index: 1000000000;
+    --hug-duration: 460ms;
+    --hug-line: #dfe3ea;
+    --hug-surface: #ffffff;
+    --hug-text: #14171f;
+    --hug-accent: #4b46e0;
+
+    position: relative;
+    width: 100%;
+    z-index: 0;
+    color: var(--hug-text);
   }
-}
 
-.hug-root[data-mode='expanded'] {
-  z-index: var(--hug-z-index);
-}
+  @media (prefers-color-scheme: dark) {
+    .hug-root {
+      --hug-line: #2b2f38;
+      --hug-surface: #171a20;
+      --hug-text: #ececea;
+      --hug-accent: #9b94ff;
+    }
+  }
 
-.hug-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: calc(var(--hug-z-index) - 1);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  background: var(--hug-backdrop);
-  -webkit-backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(var(--hug-backdrop-saturate));
-  backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(var(--hug-backdrop-saturate));
-  transition:
-    opacity var(--hug-duration-fast) var(--hug-easing),
-    visibility 0s linear var(--hug-duration-fast);
-}
+  .hug-root[data-mode='expanded'] {
+    z-index: var(--hug-z-index);
+  }
 
-.hug-root[data-mode='expanded'] .hug-backdrop {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition:
-    opacity var(--hug-duration-fast) var(--hug-easing),
-    visibility 0s;
-}
+  .hug-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--hug-z-index) - 1);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    background: rgb(11 13 20 / 45%);
+    transition:
+      opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 300ms;
+  }
 
-.hug-box {
-  position: relative;
-  z-index: var(--hug-z-index);
-  width: 100%;
-  height: var(--hug-initial-height, 240px);
-  overflow: hidden;
-  background: var(--hug-surface);
-  border-radius: var(--hug-radius);
-  box-shadow:
-    inset 0 0 0 var(--hug-border-width) var(--hug-line),
-    var(--hug-shadow);
-  transition:
-    height var(--hug-duration-content) var(--hug-easing-content),
-    border-radius var(--hug-duration-fast) var(--hug-easing),
-    box-shadow var(--hug-duration-fast) var(--hug-easing);
-}
+  .hug-root[data-mode='expanded'] .hug-backdrop {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s;
+  }
 
-.hug-root[data-sizing='fixed'] .hug-box {
-  transition:
-    height var(--hug-duration) var(--hug-easing),
-    border-radius var(--hug-duration-fast) var(--hug-easing),
-    box-shadow var(--hug-duration-fast) var(--hug-easing);
-}
+  .hug-box {
+    position: relative;
+    z-index: var(--hug-z-index);
+    width: 100%;
+    height: var(--hug-initial-height, 240px);
+    overflow: hidden;
+    background: var(--hug-surface);
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 1px var(--hug-line);
+    transition:
+      height 260ms cubic-bezier(0.33, 1, 0.68, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
-.hug-root[data-phase='resizing'] .hug-box {
-  transition:
-    height var(--hug-duration-content) var(--hug-easing-content),
-    border-radius var(--hug-duration-fast) var(--hug-easing),
-    box-shadow var(--hug-duration-fast) var(--hug-easing);
-}
+  .hug-root[data-sizing='fixed'] .hug-box {
+    transition:
+      height var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
-.hug-root[data-phase='expanding'] .hug-box,
-.hug-root[data-phase='collapsing'] .hug-box {
-  transition:
-    top var(--hug-duration) var(--hug-easing),
-    left var(--hug-duration) var(--hug-easing),
-    width var(--hug-duration) var(--hug-easing),
-    height var(--hug-duration) var(--hug-easing),
-    border-radius var(--hug-duration-fast) var(--hug-easing),
-    box-shadow var(--hug-duration-fast) var(--hug-easing);
-}
+  .hug-root[data-phase='resizing'] .hug-box {
+    transition:
+      height 260ms cubic-bezier(0.33, 1, 0.68, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
-.hug-root[data-mode='expanded'] .hug-box {
-  border-radius: var(--hug-radius-expanded);
-  box-shadow: var(--hug-shadow-expanded);
-}
+  .hug-root[data-phase='expanding'] .hug-box,
+  .hug-root[data-phase='collapsing'] .hug-box {
+    transition:
+      top var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      left var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      width var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      height var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
-.hug-frame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: transparent;
-}
+  .hug-root[data-mode='expanded'] .hug-box {
+    border-radius: 0;
+    box-shadow: none;
+  }
 
-.hug-frame:focus-visible {
-  outline: var(--hug-focus-ring-width) solid var(--hug-accent);
-  outline-offset: var(--hug-focus-ring-offset);
-}
+  .hug-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
 
-.hug-collapse {
-  position: absolute;
-  top: max(var(--hug-collapse-offset), env(safe-area-inset-top));
-  right: max(var(--hug-collapse-offset), env(safe-area-inset-right));
-  z-index: var(--hug-collapse-z-index);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--hug-collapse-size);
-  height: var(--hug-collapse-size);
-  padding: 0;
-  border: var(--hug-collapse-border-width) solid var(--hug-glass-line);
-  border-radius: var(--hug-collapse-radius);
-  background: var(--hug-glass);
-  -webkit-backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
-  backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
-  color: var(--hug-text);
-  cursor: pointer;
-  transition:
-    background var(--hug-duration-fast) var(--hug-easing),
-    transform var(--hug-duration-fast) var(--hug-easing);
-}
+  .hug-frame:focus-visible {
+    outline: 2px solid var(--hug-accent);
+    outline-offset: -2px;
+  }
 
-.hug-collapse:hover {
-  background: var(--hug-glass-hover);
-}
+  /* The library owns where the control sits; the node inside it is either the
+     built-in button or whatever `renderCollapse` returned. */
+  [data-hug-part='collapse'] {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 0;
+    pointer-events: none;
+  }
 
-.hug-collapse:active {
-  transform: scale(var(--hug-collapse-press-scale));
-}
+  [data-hug-part='collapse'] > * {
+    pointer-events: auto;
+  }
 
-.hug-collapse svg {
-  width: var(--hug-collapse-icon-size);
-  height: var(--hug-collapse-icon-size);
-}
-
-.hug-collapse svg path {
-  stroke-width: var(--hug-collapse-icon-stroke);
-}
-
-.hug-collapse:focus-visible {
-  outline: var(--hug-focus-ring-width) solid var(--hug-accent);
-  outline-offset: var(--hug-collapse-focus-ring-offset);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hug-box,
-  .hug-backdrop,
   .hug-collapse {
-    transition: none;
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--hug-line);
+    border-radius: 999px;
+    background: var(--hug-surface);
+    color: var(--hug-text);
+    cursor: pointer;
+    transition:
+      background 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hug-collapse:hover {
+    background: var(--hug-line);
+  }
+
+  .hug-collapse:active {
+    transform: scale(0.94);
+  }
+
+  [data-hug-part='collapse-icon'] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hug-collapse:focus-visible {
+    outline: 2px solid var(--hug-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hug-box,
+    .hug-backdrop,
+    .hug-collapse {
+      transition: none;
+    }
   }
 }
