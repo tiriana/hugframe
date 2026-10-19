@@ -6,8 +6,9 @@ type HugFrameInstance = ReturnType<typeof createHugFrame>
 type ColumnCount = 1 | 2 | 3
 type CollapseStyle = 'default' | 'custom' | 'hidden'
 
-const CHILD_SRC = '/child.html'
-const STATUS_SRC = '/child.html?view=status'
+const BASE_URL = import.meta.env.BASE_URL
+const CHILD_SRC = `${BASE_URL}child.html`
+const STATUS_SRC = `${BASE_URL}child.html?view=status`
 const FIXED_HEIGHT = 'clamp(280px, 42vh, 460px)'
 
 const COLUMNS: readonly ColumnCount[] = [1, 2, 3]
