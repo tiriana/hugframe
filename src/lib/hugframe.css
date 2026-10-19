@@ -1,23 +1,38 @@
 .hug-root {
+  /* The entire theme is configured in these two blocks — here and in the dark block below. */
   /* Must match HUGFRAME_Z_INDEX in core.ts, and stay short: CSS minifiers round long numeric literals. */
   --hug-z-index: 1000000000;
   --hug-radius: 14px;
+  --hug-radius-expanded: 0;
+  --hug-border-width: 1px;
   --hug-duration: 460ms;
   --hug-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --hug-duration-fast: 300ms;
   --hug-duration-content: 260ms;
   --hug-easing-content: cubic-bezier(0.33, 1, 0.68, 1);
   --hug-shadow: 0 1px 2px rgb(15 18 30 / 8%), 0 18px 40px -20px rgb(15 18 30 / 32%);
+  --hug-shadow-expanded: none;
   --hug-line: #dfe3ea;
   --hug-surface: #ffffff;
   --hug-text: #14171f;
   --hug-backdrop: rgb(12 15 24 / 44%);
   --hug-backdrop-blur: 12px;
+  --hug-backdrop-saturate: 0.82;
   --hug-glass: rgb(255 255 255 / 74%);
   --hug-glass-line: rgb(15 18 30 / 12%);
   --hug-glass-hover: rgb(255 255 255 / 94%);
   --hug-accent: #4b46e0;
-  --hug-accent-ink: #ffffff;
+  --hug-focus-ring-width: 2px;
+  --hug-focus-ring-offset: -2px;
+  --hug-collapse-offset: 14px;
+  --hug-collapse-z-index: 2;
+  --hug-collapse-size: 40px;
+  --hug-collapse-border-width: 1px;
+  --hug-collapse-radius: 999px;
+  --hug-collapse-blur: 10px;
+  --hug-collapse-saturate: 1.1;
+  --hug-collapse-press-scale: 0.94;
+  --hug-collapse-focus-ring-offset: 2px;
 
   position: relative;
   width: 100%;
@@ -36,7 +51,6 @@
     --hug-glass-line: rgb(255 255 255 / 14%);
     --hug-glass-hover: rgb(38 42 50 / 88%);
     --hug-accent: #9b94ff;
-    --hug-accent-ink: #12131a;
   }
 }
 
@@ -52,8 +66,8 @@
   visibility: hidden;
   pointer-events: none;
   background: var(--hug-backdrop);
-  -webkit-backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(0.82);
-  backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(0.82);
+  -webkit-backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(var(--hug-backdrop-saturate));
+  backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(var(--hug-backdrop-saturate));
   transition:
     opacity var(--hug-duration-fast) var(--hug-easing),
     visibility 0s linear var(--hug-duration-fast);
@@ -77,7 +91,7 @@
   background: var(--hug-surface);
   border-radius: var(--hug-radius);
   box-shadow:
-    inset 0 0 0 1px var(--hug-line),
+    inset 0 0 0 var(--hug-border-width) var(--hug-line),
     var(--hug-shadow);
   transition:
     height var(--hug-duration-content) var(--hug-easing-content),
@@ -111,8 +125,8 @@
 }
 
 .hug-root[data-mode='expanded'] .hug-box {
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: var(--hug-radius-expanded);
+  box-shadow: var(--hug-shadow-expanded);
 }
 
 .hug-frame {
@@ -124,26 +138,26 @@
 }
 
 .hug-frame:focus-visible {
-  outline: 2px solid var(--hug-accent);
-  outline-offset: -2px;
+  outline: var(--hug-focus-ring-width) solid var(--hug-accent);
+  outline-offset: var(--hug-focus-ring-offset);
 }
 
 .hug-collapse {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
-  right: max(14px, env(safe-area-inset-right));
-  z-index: 2;
+  top: max(var(--hug-collapse-offset), env(safe-area-inset-top));
+  right: max(var(--hug-collapse-offset), env(safe-area-inset-right));
+  z-index: var(--hug-collapse-z-index);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--hug-collapse-size);
+  height: var(--hug-collapse-size);
   padding: 0;
-  border: 1px solid var(--hug-glass-line);
-  border-radius: 999px;
+  border: var(--hug-collapse-border-width) solid var(--hug-glass-line);
+  border-radius: var(--hug-collapse-radius);
   background: var(--hug-glass);
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
+  backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
   color: var(--hug-text);
   cursor: pointer;
   transition:
@@ -156,12 +170,12 @@
 }
 
 .hug-collapse:active {
-  transform: scale(0.94);
+  transform: scale(var(--hug-collapse-press-scale));
 }
 
 .hug-collapse:focus-visible {
-  outline: 2px solid var(--hug-accent);
-  outline-offset: 2px;
+  outline: var(--hug-focus-ring-width) solid var(--hug-accent);
+  outline-offset: var(--hug-collapse-focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {
