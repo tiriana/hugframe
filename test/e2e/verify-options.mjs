@@ -13,6 +13,14 @@ const { check, finish } = createReport('options: the exposed knobs change behavi
 const childSrc = new URL('child.html', BASE + '/').pathname
 
 const browser = await chromium.launch()
+
+// A crash mid-suite would otherwise swallow every result collected so far, which
+// makes a CI failure impossible to read.
+process.on('unhandledRejection', (error) => {
+  console.log(`\nFAIL  the suite ran to completion\n        -> ${error?.message ?? error}`)
+  finish()
+  process.exit(1)
+})
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const errors = []
 page.on('console', (message) => {

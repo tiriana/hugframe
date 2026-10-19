@@ -12,6 +12,7 @@ const SUITES = [
   'verify-header.mjs',
   'verify-docs.mjs',
   'verify-options.mjs',
+  'verify-playground.mjs',
 ]
 
 const run = (command, args, env) =>

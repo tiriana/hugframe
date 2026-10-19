@@ -48,12 +48,13 @@ function protocolRow(term: string, description: string): HTMLElement {
   ])
 }
 
-// The demo is the site root, so its chrome links home with `./` and across to `api/`.
-// Both pages share this markup; only these tokens and the current-section marker differ.
+// The chrome links are absolute, built from Vite's base URL: `/` in dev, `/hugframe/`
+// when deployed. Both pages share this markup; only the tokens and the current-section
+// marker differ.
 function siteChrome(): { header: Element; footer: Element } {
   const markup = chromeHtml
-    .replaceAll('{{home}}', './')
-    .replaceAll('{{api}}', 'api/')
+    .replaceAll('{{home}}', BASE_URL)
+    .replaceAll('{{api}}', `${BASE_URL}api/`)
     .replaceAll('{{demo-current}}', ' aria-current="page"')
     .replaceAll('{{api-current}}', '')
 
