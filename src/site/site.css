@@ -1,0 +1,216 @@
+/* The shared shell: the background and texture, the type, the header, the footer and the
+   navigation behaviour. The demo loads this file through its entry module and the API page
+   has it inlined by scripts/build-docs.mjs. It reads the palette and font tokens declared
+   in src/demo/theme.css; it declares no colours or type of its own. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --measure: 940px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(rgb(120 116 100 / 10%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14px 24px 13px;
+}
+
+.masthead__brand {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.masthead__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.masthead__nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__nav a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.masthead__nav a[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__util {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.masthead__util a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__github {
+  width: 44px;
+}
+
+.masthead__npm {
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.masthead__util a:hover {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.masthead__nav a:focus-visible,
+.masthead__util a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.footer {
+  border-top: 1px solid var(--line);
+}
+
+.footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 22px 24px 44px;
+}
+
+.footer__note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.footer__nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer__nav a:hover {
+  color: var(--text);
+}
+
+.footer__nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 560px) {
+  .masthead__inner {
+    padding: 12px 18px 11px;
+  }
+
+  .masthead__util {
+    order: 2;
+  }
+
+  .masthead__nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .footer__inner {
+    padding: 18px 18px 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masthead__nav a,
+  .masthead__util a {
+    transition: none;
+  }
+}

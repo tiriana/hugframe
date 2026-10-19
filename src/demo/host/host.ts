@@ -1,6 +1,7 @@
-import { el, svg } from '@/demo/dom'
+import { el } from '@/demo/dom'
 import { createHugFrame } from '@/lib/core'
 import type { HugFrameMode } from '@/lib/protocol'
+import chromeHtml from '@/site/chrome.html?raw'
 
 type HugFrameInstance = ReturnType<typeof createHugFrame>
 type ColumnCount = 1 | 2 | 3
@@ -47,27 +48,23 @@ function protocolRow(term: string, description: string): HTMLElement {
   ])
 }
 
-function githubMark(): SVGElement {
-  return svg(
-    'svg',
-    {
-      attrs: {
-        viewBox: '0 0 16 16',
-        width: 18,
-        height: 18,
-        fill: 'currentColor',
-        'aria-hidden': 'true',
-        focusable: 'false',
-      },
-    },
-    [
-      svg('path', {
-        attrs: {
-          d: 'M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656',
-        },
-      }),
-    ],
-  )
+// The demo is the site root, so its chrome links home with `./` and across to `api/`.
+// Both pages share this markup; only these tokens and the current-section marker differ.
+function siteChrome(): { header: Element; footer: Element } {
+  const markup = chromeHtml
+    .replaceAll('{{home}}', './')
+    .replaceAll('{{api}}', 'api/')
+    .replaceAll('{{demo-current}}', ' aria-current="page"')
+    .replaceAll('{{api-current}}', '')
+
+  const template = document.createElement('template')
+  template.innerHTML = markup
+  const header = template.content.querySelector('header')
+  const footer = template.content.querySelector('footer')
+
+  if (!header || !footer) throw new Error('site chrome is missing its header or footer')
+
+  return { header, footer }
 }
 
 export function mountHost(container: HTMLElement): void {
@@ -159,73 +156,39 @@ export function mountHost(container: HTMLElement): void {
     layout,
   ])
 
-  const page = el('div', { class: 'page' }, [
-    el('header', { class: 'masthead' }, [
-      el('a', { class: 'masthead__brand', attrs: { href: '#top' }, text: 'hugframe' }),
-      el('div', { class: 'masthead__end' }, [
-        el('nav', { class: 'masthead__nav', attrs: { 'aria-label': 'Page sections' } }, [
-          el('a', { attrs: { href: '#workspace' }, text: 'Workspace' }),
-          el('a', { attrs: { href: '#how' }, text: 'How it works' }),
-        ]),
-        el('div', { class: 'masthead__util' }, [
-          el('a', {
-            class: 'masthead__docs',
-            attrs: { href: 'api/', title: 'API reference' },
-            text: 'Docs',
-          }),
-          el(
-            'a',
-            {
-              class: 'masthead__github',
-              attrs: {
-                href: 'https://github.com/tiriana/hugframe',
-                'aria-label': 'hugframe on GitHub',
-                title: 'hugframe on GitHub',
-                target: '_blank',
-                rel: 'noopener noreferrer',
-              },
-            },
-            [githubMark()],
-          ),
-        ]),
-      ]),
+  const main = el('main', {}, [
+    el('section', { class: 'lead', attrs: { id: 'top' } }, [
+      el('p', { class: 'eyebrow', text: 'Embedded app windows' }),
+      el('h1', { text: 'An iframe that fits its content, then opens into the whole window.' }),
+      el('p', {
+        class: 'lead__body',
+        text: 'The framed document reports its own height, so the host wraps it exactly. Let the host drive the height instead and the frame becomes a fixed window the app scrolls inside. Either way it morphs into a chromeless full-window view and back without reloading.',
+      }),
     ]),
-    el('main', {}, [
-      el('section', { class: 'lead', attrs: { id: 'top' } }, [
-        el('p', { class: 'eyebrow', text: 'Embedded app windows' }),
-        el('h1', { text: 'An iframe that fits its content, then opens into the whole window.' }),
-        el('p', {
-          class: 'lead__body',
-          text: 'The framed document reports its own height, so the host wraps it exactly. Let the host drive the height instead and the frame becomes a fixed window the app scrolls inside. Either way it morphs into a chromeless full-window view and back without reloading.',
-        }),
+    workbench,
+    el('section', { class: 'how', attrs: { id: 'how' } }, [
+      el('h2', { text: 'How it works' }),
+      el('p', { class: 'how__body' }, [
+        'The child document runs ',
+        el('code', { text: 'createHugFrameChild()' }),
+        ' and speaks a small message protocol with the host. The host sizes the frame, tells the child which mode it is in, and tells it whether the host is hugging its content or driving the height.',
       ]),
-      workbench,
-      el('section', { class: 'how', attrs: { id: 'how' } }, [
-        el('h2', { text: 'How it works' }),
-        el('p', { class: 'how__body' }, [
-          'The child document runs ',
-          el('code', { text: 'createHugFrameChild()' }),
-          ' and speaks a small message protocol with the host. The host sizes the frame, tells the child which mode it is in, and tells it whether the host is hugging its content or driving the height.',
-        ]),
-        el('dl', { class: 'protocol' }, [
-          protocolRow('ready', 'The child loaded and attached its listeners.'),
-          protocolRow('size', 'Measured height and width, reported on every content change.'),
-          protocolRow('request', "Expand, collapse, or close, from the child's own controls."),
-          protocolRow('mode', 'Inline or expanded, so the child adapts its own layout.'),
-          protocolRow(
-            'sizing',
-            'Content-hugging or a host-driven height, so the child knows who is in charge.',
-          ),
-        ]),
+      el('dl', { class: 'protocol' }, [
+        protocolRow('ready', 'The child loaded and attached its listeners.'),
+        protocolRow('size', 'Measured height and width, reported on every content change.'),
+        protocolRow('request', "Expand, collapse, or close, from the child's own controls."),
+        protocolRow('mode', 'Inline or expanded, so the child adapts its own layout.'),
+        protocolRow(
+          'sizing',
+          'Content-hugging or a host-driven height, so the child knows who is in charge.',
+        ),
       ]),
-    ]),
-    el('footer', { class: 'footer' }, [
-      el('span', { text: 'hugframe demo' }),
-      el('span', { text: 'No framework — plain DOM and CSS' }),
     ]),
   ])
+  const page = el('div', { class: 'page' }, [main])
+  const { header, footer } = siteChrome()
 
-  container.append(page)
+  container.append(header, page, footer)
 
   const primary = createHugFrame({
     container: primaryMount,
