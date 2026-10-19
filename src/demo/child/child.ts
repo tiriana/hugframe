@@ -18,10 +18,14 @@ function readView(): ChildView {
 export function mountChild(container: HTMLElement): void {
   const view = readView()
 
+  // A thread is selected from the start: the composer refuses to send without
+  // one, and a framed page has no way to pick one from outside, so an embed
+  // whose list is not clickable would look broken.
+  const threads = makeInitialThreads(3)
   const state: ThreadAppState = {
     mode: 'inline',
-    threads: makeInitialThreads(3),
-    selectedId: null,
+    threads,
+    selectedId: threads[0]?.id ?? null,
   }
 
   let threadApp: ThreadApp | null = null
