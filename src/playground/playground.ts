@@ -6,13 +6,14 @@ import type {
   HugFrameCollapseHandle,
   HugFrameHeight,
   HugFrameInstance,
+  HugFrameOptions,
   HugFramePhase,
 } from '@/lib/types'
 import type { HugFrameMode, HugFrameSizing } from '@/lib/protocol'
+import { buildCollapseAffordance } from '@/lib/template'
+import { createAccordion } from '@/playground/accordion'
 import { el, svg, type Child } from '@/playground/dom'
 import {
-  alphaColorControl,
-  alphaColorCss,
   colorControl,
   numberControl,
   rangeControl,
@@ -20,7 +21,6 @@ import {
   selectControl,
   switchControl,
   textControl,
-  type AlphaColor,
 } from '@/playground/widgets'
 import chromeHtml from '@/site/chrome.html?raw'
 
@@ -28,43 +28,28 @@ const BASE_URL = import.meta.env.BASE_URL
 const CHILD_SRC = `${BASE_URL}child.html`
 const ORIGIN = window.location.origin
 
+/*
+ * The library's public custom-property surface is seven tokens. Six of them are appearance
+ * values and are driven from the Appearance and Motion groups; the seventh, --hug-z-index,
+ * is engine-coupled (it must match HUGFRAME_Z_INDEX in core.ts) so it is read for the dock
+ * and never written here. Everything else that used to be a token is a plain literal in the
+ * library stylesheet now, and is restyled through the parts and state attributes instead —
+ * see the recipes below.
+ */
 interface Tokens {
-  radius: number
-  radiusExpanded: number
-  borderWidth: number
   surface: string
   line: string
   text: string
   accent: string
-  focusRingWidth: number
-  focusRingOffset: number
-  backdrop: AlphaColor
-  backdropBlur: number
-  backdropSaturate: number
-  glass: AlphaColor
-  glassLine: AlphaColor
-  glassHover: AlphaColor
   duration: number
-  durationFast: number
-  durationContent: number
-  easing: string
-  easingContent: string
-  collapseOffset: number
-  collapseSize: number
-  collapseRadius: number
-  collapseBorderWidth: number
-  collapseBlur: number
-  collapseSaturate: number
-  collapsePressScale: number
-  collapseIconSize: number
-  collapseIconStroke: number
   initialHeightToken: number
 }
 
 type TokenKey = keyof Tokens
 
 interface PlaygroundState {
-  columns: '1' | '2' | '3'
+  width: 'full' | 'wide' | 'half' | 'compact'
+  recipe: RecipeId
   heightMode: 'content' | 'fixed' | 'length'
   heightPx: number
   heightLength: string
@@ -86,7 +71,7 @@ interface PlaygroundState {
   tokens: Tokens
 }
 
-type TokenValue = number | string | AlphaColor
+type TokenValue = number | string
 
 interface TokenDef {
   name: string
@@ -94,63 +79,121 @@ interface TokenDef {
 }
 
 const px = (value: TokenValue): string => `${value as number}px`
+const ms = (value: TokenValue): string => `${value as number}ms`
 const raw = (value: TokenValue): string => String(value)
-const alpha = (value: TokenValue): string => alphaColorCss(value as AlphaColor)
 
+// Every entry names the unit the token actually takes: lengths are px, a duration is ms, and
+// the colour tokens pass through untouched. A token written with the wrong unit is silently
+// dropped by CSS, which is why the unit lives next to the name.
 const TOKEN_VARS: Record<TokenKey, TokenDef> = {
-  radius: { name: '--hug-radius', css: px },
-  radiusExpanded: { name: '--hug-radius-expanded', css: px },
-  borderWidth: { name: '--hug-border-width', css: px },
   surface: { name: '--hug-surface', css: raw },
   line: { name: '--hug-line', css: raw },
   text: { name: '--hug-text', css: raw },
   accent: { name: '--hug-accent', css: raw },
-  focusRingWidth: { name: '--hug-focus-ring-width', css: px },
-  focusRingOffset: { name: '--hug-focus-ring-offset', css: px },
-  backdrop: { name: '--hug-backdrop', css: alpha },
-  backdropBlur: { name: '--hug-backdrop-blur', css: px },
-  backdropSaturate: { name: '--hug-backdrop-saturate', css: raw },
-  glass: { name: '--hug-glass', css: alpha },
-  glassLine: { name: '--hug-glass-line', css: alpha },
-  glassHover: { name: '--hug-glass-hover', css: alpha },
-  duration: { name: '--hug-duration', css: px },
-  durationFast: { name: '--hug-duration-fast', css: px },
-  durationContent: { name: '--hug-duration-content', css: px },
-  easing: { name: '--hug-easing', css: raw },
-  easingContent: { name: '--hug-easing-content', css: raw },
-  collapseOffset: { name: '--hug-collapse-offset', css: px },
-  collapseSize: { name: '--hug-collapse-size', css: px },
-  collapseRadius: { name: '--hug-collapse-radius', css: px },
-  collapseBorderWidth: { name: '--hug-collapse-border-width', css: px },
-  collapseBlur: { name: '--hug-collapse-blur', css: px },
-  collapseSaturate: { name: '--hug-collapse-saturate', css: raw },
-  collapsePressScale: { name: '--hug-collapse-press-scale', css: raw },
-  collapseIconSize: { name: '--hug-collapse-icon-size', css: px },
-  collapseIconStroke: { name: '--hug-collapse-icon-stroke', css: raw },
+  duration: { name: '--hug-duration', css: ms },
   initialHeightToken: { name: '--hug-initial-height', css: px },
 }
 
-const COLUMN_WIDTHS: Record<
-  PlaygroundState['columns'],
-  { frame: string; side: string; gap: string }
-> = {
-  '1': { frame: '34%', side: 'calc(66% - 20px)', gap: '20px' },
-  '2': { frame: '62%', side: 'calc(38% - 20px)', gap: '20px' },
-  '3': { frame: '100%', side: '0px', gap: '0px' },
+type RecipeId = 'none' | 'square' | 'flat' | 'outline' | 'tint'
+
+interface Recipe {
+  id: RecipeId
+  label: string
+  /** Shown to the reader verbatim, and injected into the page verbatim. */
+  rules: string[]
 }
 
-const EASING_OPTIONS = [
-  { value: 'cubic-bezier(0.22, 1, 0.36, 1)', label: 'ease-out quint (default)' },
-  { value: 'cubic-bezier(0.33, 1, 0.68, 1)', label: 'ease-out cubic' },
-  { value: 'cubic-bezier(0.4, 0, 0.2, 1)', label: 'material standard' },
-  { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: 'soft overshoot' },
-  { value: 'linear', label: 'linear' },
-  { value: 'ease-in-out', label: 'ease-in-out' },
-] as const
+/*
+ * The demonstration that replaced the retired token half of the panel. Each recipe is a few
+ * ordinary rules written against the parts (`data-hug-part`) and the state attributes
+ * (`data-mode`), scoped to this frame by a class on its container. The library ships inside
+ * `@layer hugframe`, so unlayered rules like these win with no `!important` — including the
+ * expanded state. The strings below are both the copyable snippet and the CSS that runs.
+ */
+const RECIPES: Recipe[] = [
+  {
+    id: 'none',
+    label: 'Library default',
+    rules: [],
+  },
+  {
+    id: 'square',
+    label: 'Square frame',
+    rules: [
+      `.pg-recipe--square [data-hug-part='box'] {
+  border-radius: 0;
+}
+
+.pg-recipe--square [data-hug-part='collapse'] > * {
+  border-radius: 0;
+}`,
+    ],
+  },
+  {
+    id: 'flat',
+    label: 'Flat close control',
+    rules: [
+      `.pg-recipe--flat [data-hug-part='collapse'] > * {
+  width: auto;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--hug-accent);
+  color: var(--hug-surface);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pg-recipe--flat [data-hug-part='collapse-icon'] {
+  width: 20px;
+  height: 20px;
+}`,
+    ],
+  },
+  {
+    id: 'outline',
+    label: 'Wireframe',
+    rules: [
+      `.pg-recipe--outline [data-hug-part='box'] {
+  border-radius: 4px;
+  box-shadow: none;
+  outline: 2px solid var(--hug-accent);
+  outline-offset: 6px;
+}`,
+    ],
+  },
+  {
+    id: 'tint',
+    label: 'Accent tint',
+    rules: [
+      `.pg-recipe--tint [data-hug-part='box'] {
+  background: color-mix(in srgb, var(--hug-accent) 7%, var(--hug-surface));
+}
+
+.pg-recipe--tint [data-hug-part='root'][data-mode='expanded'] [data-hug-part='box'] {
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 3px var(--hug-accent);
+}`,
+    ],
+  },
+]
+
+function recipeClass(id: RecipeId): string {
+  return `pg-recipe--${id}`
+}
+
+const WIDTH_PRESETS: Record<PlaygroundState['width'], string> = {
+  full: '100%',
+  wide: '72%',
+  half: '48%',
+  compact: '340px',
+}
 
 function defaults(): PlaygroundState {
   return {
-    columns: '2',
+    width: 'full',
+    recipe: 'none',
     heightMode: 'content',
     heightPx: 360,
     heightLength: 'clamp(280px, 42vh, 460px)',
@@ -170,35 +213,11 @@ function defaults(): PlaygroundState {
     title: 'Playground app',
     affordance: 'default',
     tokens: {
-      radius: 14,
-      radiusExpanded: 0,
-      borderWidth: 1,
       surface: '#ffffff',
       line: '#dfe3ea',
       text: '#14171f',
       accent: '#4b46e0',
-      focusRingWidth: 2,
-      focusRingOffset: -2,
-      backdrop: { hex: '#0c0f18', alpha: 44 },
-      backdropBlur: 12,
-      backdropSaturate: 0.82,
-      glass: { hex: '#ffffff', alpha: 74 },
-      glassLine: { hex: '#0f121e', alpha: 12 },
-      glassHover: { hex: '#ffffff', alpha: 94 },
       duration: 460,
-      durationFast: 300,
-      durationContent: 260,
-      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      easingContent: 'cubic-bezier(0.33, 1, 0.68, 1)',
-      collapseOffset: 14,
-      collapseSize: 40,
-      collapseRadius: 999,
-      collapseBorderWidth: 1,
-      collapseBlur: 10,
-      collapseSaturate: 1.1,
-      collapsePressScale: 0.94,
-      collapseIconSize: 18,
-      collapseIconStroke: 1.6,
       initialHeightToken: 240,
     },
   }
@@ -319,6 +338,18 @@ export function mountPlayground(container: HTMLElement): void {
   let measured: number | null = null
   let uiReady = false
 
+  // The recipe snippets are injected verbatim, so the selector shown beside the result is
+  // literally the CSS that runs. Coming from an unlayered stylesheet, these rules beat the
+  // library's @layer hugframe rules without needing !important.
+  if (!document.getElementById('pg-recipes')) {
+    document.head.append(
+      el('style', {
+        attrs: { id: 'pg-recipes' },
+        text: RECIPES.flatMap((recipe) => recipe.rules).join('\n\n'),
+      }),
+    )
+  }
+
   const syncHeightVisibility = (): void => {
     heightPxField.el.hidden = state.heightMode !== 'fixed'
     heightLengthField.el.hidden = state.heightMode !== 'length'
@@ -329,7 +360,6 @@ export function mountPlayground(container: HTMLElement): void {
   }
 
   const frameMount = el('div', { class: 'pg-frame' })
-  const layout = el('div', { class: 'pg-layout' })
 
   const heightItem = meterItem('content height')
   const modeItem = meterItem('mode')
@@ -343,6 +373,7 @@ export function mountPlayground(container: HTMLElement): void {
     sizingItem.root,
     readyItem.root,
   ])
+  const statusSlot = el('div', { class: 'pg-status' }, [meter])
 
   const frame: HugFrameInstance = createHugFrame({
     container: frameMount,
@@ -360,6 +391,7 @@ export function mountPlayground(container: HTMLElement): void {
     onModeChange: (next) => {
       mode = next
       renderMeter()
+      if (uiReady) modeField.set(next)
       syncExpanded()
     },
     onPhaseChange: (next) => {
@@ -601,45 +633,6 @@ export function mountPlayground(container: HTMLElement): void {
     },
   })
 
-  const radiusField = rangeControl({
-    id: 'pg-radius',
-    label: '--hug-radius',
-    min: 0,
-    max: 40,
-    step: 1,
-    value: state.tokens.radius,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.radius = value
-      commit()
-    },
-  })
-  const radiusExpandedField = rangeControl({
-    id: 'pg-radius-expanded',
-    label: '--hug-radius-expanded',
-    min: 0,
-    max: 40,
-    step: 1,
-    value: state.tokens.radiusExpanded,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.radiusExpanded = value
-      commit()
-    },
-  })
-  const borderWidthField = rangeControl({
-    id: 'pg-border-width',
-    label: '--hug-border-width',
-    min: 0,
-    max: 6,
-    step: 0.5,
-    value: state.tokens.borderWidth,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.borderWidth = value
-      commit()
-    },
-  })
   const surfaceField = colorControl({
     id: 'pg-surface',
     label: '--hug-surface',
@@ -676,94 +669,6 @@ export function mountPlayground(container: HTMLElement): void {
       commit()
     },
   })
-  const focusRingWidthField = rangeControl({
-    id: 'pg-focus-ring-width',
-    label: '--hug-focus-ring-width',
-    min: 0,
-    max: 6,
-    step: 0.5,
-    value: state.tokens.focusRingWidth,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.focusRingWidth = value
-      commit()
-    },
-  })
-  const focusRingOffsetField = rangeControl({
-    id: 'pg-focus-ring-offset',
-    label: '--hug-focus-ring-offset',
-    min: -8,
-    max: 8,
-    step: 1,
-    value: state.tokens.focusRingOffset,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.focusRingOffset = value
-      commit()
-    },
-  })
-  const backdropField = alphaColorControl({
-    id: 'pg-backdrop',
-    label: '--hug-backdrop',
-    value: state.tokens.backdrop,
-    onInput: (value) => {
-      state.tokens.backdrop = value
-      commit()
-    },
-  })
-  const backdropBlurField = rangeControl({
-    id: 'pg-backdrop-blur',
-    label: '--hug-backdrop-blur',
-    min: 0,
-    max: 40,
-    step: 1,
-    value: state.tokens.backdropBlur,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.backdropBlur = value
-      commit()
-    },
-  })
-  const backdropSaturateField = rangeControl({
-    id: 'pg-backdrop-saturate',
-    label: '--hug-backdrop-saturate',
-    min: 0,
-    max: 2,
-    step: 0.05,
-    value: state.tokens.backdropSaturate,
-    onInput: (value) => {
-      state.tokens.backdropSaturate = value
-      commit()
-    },
-  })
-  const glassField = alphaColorControl({
-    id: 'pg-glass',
-    label: '--hug-glass',
-    value: state.tokens.glass,
-    onInput: (value) => {
-      state.tokens.glass = value
-      commit()
-    },
-  })
-  const glassLineField = alphaColorControl({
-    id: 'pg-glass-line',
-    label: '--hug-glass-line',
-    value: state.tokens.glassLine,
-    onInput: (value) => {
-      state.tokens.glassLine = value
-      commit()
-    },
-  })
-  const glassHoverField = alphaColorControl({
-    id: 'pg-glass-hover',
-    label: '--hug-glass-hover',
-    value: state.tokens.glassHover,
-    onInput: (value) => {
-      state.tokens.glassHover = value
-      commit()
-    },
-  })
-
   const durationField = rangeControl({
     id: 'pg-duration',
     label: '--hug-duration',
@@ -777,53 +682,6 @@ export function mountPlayground(container: HTMLElement): void {
       commit()
     },
   })
-  const durationFastField = rangeControl({
-    id: 'pg-duration-fast',
-    label: '--hug-duration-fast',
-    min: 0,
-    max: 1200,
-    step: 20,
-    value: state.tokens.durationFast,
-    unit: 'ms',
-    onInput: (value) => {
-      state.tokens.durationFast = value
-      commit()
-    },
-  })
-  const durationContentField = rangeControl({
-    id: 'pg-duration-content',
-    label: '--hug-duration-content',
-    min: 0,
-    max: 1200,
-    step: 20,
-    value: state.tokens.durationContent,
-    unit: 'ms',
-    onInput: (value) => {
-      state.tokens.durationContent = value
-      commit()
-    },
-  })
-  const easingField = selectControl({
-    id: 'pg-easing',
-    label: '--hug-easing',
-    value: state.tokens.easing,
-    options: EASING_OPTIONS,
-    onInput: (value) => {
-      state.tokens.easing = value
-      commit()
-    },
-  })
-  const easingContentField = selectControl({
-    id: 'pg-easing-content',
-    label: '--hug-easing-content',
-    value: state.tokens.easingContent,
-    options: EASING_OPTIONS,
-    onInput: (value) => {
-      state.tokens.easingContent = value
-      commit()
-    },
-  })
-
   const affordanceField = segmentedControl({
     id: 'pg-affordance',
     label: 'Collapse affordance',
@@ -840,145 +698,51 @@ export function mountPlayground(container: HTMLElement): void {
       commit()
     },
   })
-  const collapseOffsetField = rangeControl({
-    id: 'pg-collapse-offset',
-    label: '--hug-collapse-offset',
-    min: 0,
-    max: 64,
-    step: 1,
-    value: state.tokens.collapseOffset,
-    unit: 'px',
+  const modeField = segmentedControl({
+    id: 'pg-mode',
+    label: 'Frame mode',
+    value: 'inline',
+    meta: 'mirrors the frame',
+    options: [
+      { value: 'inline', label: 'Inline', title: 'The frame sits in the page and hugs the layout' },
+      { value: 'expanded', label: 'Expanded', title: 'Morph to the chromeless full-window view' },
+    ],
     onInput: (value) => {
-      state.tokens.collapseOffset = value
-      commit()
+      if (value === 'expanded') frame.expand()
+      else frame.collapse()
     },
   })
-  const collapseSizeField = rangeControl({
-    id: 'pg-collapse-size',
-    label: '--hug-collapse-size',
-    min: 20,
-    max: 72,
-    step: 1,
-    value: state.tokens.collapseSize,
-    unit: 'px',
+
+  const widthField = segmentedControl({
+    id: 'pg-width',
+    label: 'Frame width',
+    value: state.width,
+    meta: 'drives a resize',
+    options: [
+      { value: 'full', label: '100%', title: 'The frame fills its column' },
+      { value: 'wide', label: '72%', title: 'A narrower stage' },
+      { value: 'half', label: '48%', title: 'Half the column' },
+      { value: 'compact', label: '340px', title: 'A fixed narrow width' },
+    ],
     onInput: (value) => {
-      state.tokens.collapseSize = value
-      commit()
-    },
-  })
-  const collapseRadiusField = rangeControl({
-    id: 'pg-collapse-radius',
-    label: '--hug-collapse-radius',
-    min: 0,
-    max: 999,
-    step: 1,
-    value: state.tokens.collapseRadius,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.collapseRadius = value
-      commit()
-    },
-  })
-  const collapseBorderWidthField = rangeControl({
-    id: 'pg-collapse-border-width',
-    label: '--hug-collapse-border-width',
-    min: 0,
-    max: 6,
-    step: 0.5,
-    value: state.tokens.collapseBorderWidth,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.collapseBorderWidth = value
-      commit()
-    },
-  })
-  const collapseBlurField = rangeControl({
-    id: 'pg-collapse-blur',
-    label: '--hug-collapse-blur',
-    min: 0,
-    max: 40,
-    step: 1,
-    value: state.tokens.collapseBlur,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.collapseBlur = value
-      commit()
-    },
-  })
-  const collapseSaturateField = rangeControl({
-    id: 'pg-collapse-saturate',
-    label: '--hug-collapse-saturate',
-    min: 0,
-    max: 2,
-    step: 0.05,
-    value: state.tokens.collapseSaturate,
-    onInput: (value) => {
-      state.tokens.collapseSaturate = value
-      commit()
-    },
-  })
-  const collapsePressScaleField = rangeControl({
-    id: 'pg-collapse-press-scale',
-    label: '--hug-collapse-press-scale',
-    min: 0.8,
-    max: 1,
-    step: 0.01,
-    value: state.tokens.collapsePressScale,
-    onInput: (value) => {
-      state.tokens.collapsePressScale = value
-      commit()
-    },
-  })
-  const collapseIconSizeField = rangeControl({
-    id: 'pg-collapse-icon-size',
-    label: '--hug-collapse-icon-size',
-    min: 8,
-    max: 32,
-    step: 1,
-    value: state.tokens.collapseIconSize,
-    unit: 'px',
-    onInput: (value) => {
-      state.tokens.collapseIconSize = value
-      commit()
-    },
-  })
-  const collapseIconStrokeField = rangeControl({
-    id: 'pg-collapse-icon-stroke',
-    label: '--hug-collapse-icon-stroke',
-    min: 0.5,
-    max: 3,
-    step: 0.1,
-    value: state.tokens.collapseIconStroke,
-    onInput: (value) => {
-      state.tokens.collapseIconStroke = value
+      state.width = value as PlaygroundState['width']
       commit()
     },
   })
 
-  const columnsField = segmentedControl({
-    id: 'pg-columns',
-    label: 'Layout around the frame',
-    value: state.columns,
-    options: [
-      { value: '1', label: '1 col', title: 'A narrow frame with a wide side panel' },
-      { value: '2', label: '2 col', title: 'A wide frame with a narrow side panel' },
-      { value: '3', label: '3 col', title: 'The frame fills the page' },
-    ],
+  const recipeField = selectControl({
+    id: 'pg-recipe',
+    label: 'Styling recipe',
+    value: state.recipe,
+    meta: 'copy the rule below',
+    options: RECIPES.map((recipe) => ({ value: recipe.id, label: recipe.label })),
     onInput: (value) => {
-      state.columns = value as PlaygroundState['columns']
+      state.recipe = value as RecipeId
       commit()
     },
   })
 
   // ---- apply ----------------------------------------------------------------------
-
-  function applyLayout(): void {
-    const widths = COLUMN_WIDTHS[state.columns]
-    layout.style.setProperty('--frame-w', widths.frame)
-    layout.style.setProperty('--side-w', widths.side)
-    layout.style.setProperty('--side-gap', widths.gap)
-    layout.dataset.cols = state.columns
-  }
 
   function applyOptions(): void {
     frame.update({
@@ -1000,40 +764,65 @@ export function mountPlayground(container: HTMLElement): void {
     })
   }
 
-  function applyCollapse(): void {
+  function collapseOptions(): Pick<HugFrameOptions, 'collapseIcon' | 'renderCollapse'> {
     switch (state.affordance) {
       case 'svg':
-        frame.update({ collapseIcon: customCollapseIcon(), renderCollapse: undefined })
-        return
+        return { collapseIcon: customCollapseIcon(), renderCollapse: undefined }
       case 'text':
-        frame.update({ collapseIcon: '×', renderCollapse: undefined })
-        return
+        return { collapseIcon: '×', renderCollapse: undefined }
       case 'custom':
-        frame.update({
+        return {
           collapseIcon: undefined,
           renderCollapse: (handle) => customCollapseControl(handle),
-        })
-        return
+        }
       case 'hidden':
-        frame.update({ collapseIcon: undefined, renderCollapse: null })
-        return
-      case 'default':
-        frame.update({ collapseIcon: undefined, renderCollapse: undefined })
+        return { collapseIcon: undefined, renderCollapse: null }
+      default:
+        return { collapseIcon: undefined, renderCollapse: undefined }
     }
+  }
+
+  function applyCollapse(): void {
+    const options = collapseOptions()
+    frame.update(options)
+    renderPreview(options)
   }
 
   function applyTokens(): void {
     for (const key of Object.keys(TOKEN_VARS) as TokenKey[]) {
       const def = TOKEN_VARS[key]
-      frame.element.style.setProperty(def.name, def.css(state.tokens[key]))
+      const value = def.css(state.tokens[key])
+      frame.element.style.setProperty(def.name, value)
+      // The preview carries the same tokens, since it sits outside the frame's own tree.
+      previewSurface.style.setProperty(def.name, value)
     }
+  }
+
+  // The recipe class rides on the two containers, never on .hug-root itself: the library owns
+  // the root's class list, and a class on a stable ancestor is what a consumer would write.
+  function applyRecipe(): void {
+    const active = RECIPES.find((recipe) => recipe.id === state.recipe)
+    for (const recipe of RECIPES) {
+      if (recipe.rules.length === 0) continue
+      const on = recipe === active
+      const className = recipeClass(recipe.id)
+      frameMount.classList.toggle(className, on)
+      previewSurface.classList.toggle(className, on)
+    }
+    recipeCode.textContent =
+      active?.rules.join('\n\n') || '/* no recipe: the frame as the library ships it */'
+  }
+
+  function applyWidth(): void {
+    frameMount.style.width = WIDTH_PRESETS[state.width]
   }
 
   function applyAll(): void {
     applyOptions()
     applyCollapse()
     applyTokens()
-    applyLayout()
+    applyRecipe()
+    applyWidth()
     syncHeightVisibility()
     renderMeter()
   }
@@ -1049,7 +838,7 @@ export function mountPlayground(container: HTMLElement): void {
       dock.style.zIndex = String(frame.getZIndex() + 1)
       dockBody.append(meter, affordanceField.el)
     } else {
-      framePanel.append(meter)
+      statusSlot.append(meter)
       collapseGroupBody.prepend(affordanceField.el)
     }
   }
@@ -1059,18 +848,6 @@ export function mountPlayground(container: HTMLElement): void {
   const { header, footer } = siteChrome()
   const main = el('main', { class: 'pg' })
 
-  const expandButton = el('button', {
-    class: 'btn btn--primary',
-    attrs: { type: 'button' },
-    text: 'Expand',
-    on: { click: () => frame.expand() },
-  })
-  const collapseButton = el('button', {
-    class: 'btn',
-    attrs: { type: 'button' },
-    text: 'Collapse',
-    on: { click: () => frame.collapse() },
-  })
   const resetButton = el('button', {
     class: 'btn',
     attrs: { type: 'button' },
@@ -1084,65 +861,54 @@ export function mountPlayground(container: HTMLElement): void {
     },
   })
 
-  const driveRow = el('div', { class: 'pg-drive' })
-  for (const action of [
-    { label: 'Add a thread', payload: { action: 'add-thread' } },
-    { label: 'Remove a thread', payload: { action: 'remove-thread' } },
-    { label: 'Open a thread', payload: { action: 'select-thread' } },
-  ]) {
-    driveRow.append(
-      el('button', {
-        class: 'btn',
-        attrs: { type: 'button' },
-        text: action.label,
-        on: { click: () => frame.sendMessage(action.payload) },
+  const previewSurface = el('div', { class: 'pg-preview__surface' })
+  const previewNote = el('p', { class: 'pg-preview__note' })
+  const preview = el(
+    'section',
+    { class: 'pg-preview', attrs: { 'aria-labelledby': 'pg-preview-title' } },
+    [
+      el('h3', {
+        class: 'pg-preview__title',
+        attrs: { id: 'pg-preview-title' },
+        text: 'Collapse handle, live',
       }),
-    )
+      previewSurface,
+      previewNote,
+    ],
+  )
+
+  // The handle is built exactly as the engine builds it and dropped into the same
+  // [data-hug-part='collapse'] slot the box uses, so recipes that target the slot's child —
+  // or the built-in glyph — apply here too.
+  function renderPreview(options: Pick<HugFrameOptions, 'collapseIcon' | 'renderCollapse'>): void {
+    const node = buildCollapseAffordance(options, { collapse: () => frame.collapse() })
+    if (node) {
+      const slot = el('div', { attrs: { 'data-hug-part': 'collapse' } }, [node])
+      previewSurface.replaceChildren(slot)
+    } else {
+      previewSurface.replaceChildren()
+    }
+    previewNote.textContent = node
+      ? 'The handle as the frame renders it, through the same slot. Style it with the recipes above; press it and the frame collapses.'
+      : 'This mode renders no handle at all — the page collapses the frame instead.'
   }
 
-  const framePanel = el('div', { class: 'pg-frame-panel' }, [frameMount, meter])
-  const sidePanel = el('aside', { class: 'pg-side' }, [
-    el('div', { class: 'pg-card' }, [
-      el('h3', { text: 'Change the framed content' }),
-      el('p', {
-        class: 'pg-card__note',
-        text: 'These run inside the framed document. With a content height the frame glides to fit; with a fixed height it stays put and the document scrolls.',
-      }),
-      driveRow,
-    ]),
-    el('div', { class: 'pg-card' }, [
-      el('h3', { text: 'Watch the phases' }),
-      el('p', {
-        class: 'pg-card__note',
-        text: 'Switch the columns to change the width around the frame and the readout dips into the resizing phase. Expand or collapse to watch the morph and the settled state.',
-      }),
-    ]),
-  ])
-
-  layout.append(framePanel, sidePanel)
+  const title = el('h1', { class: 'pg-title', text: 'Playground' })
 
   const stage = el(
     'section',
     { class: 'pg-stage', attrs: { 'aria-labelledby': 'pg-stage-title' } },
     [
       el('div', { class: 'pg-stage__head' }, [
-        el('div', {}, [
-          el('h2', { attrs: { id: 'pg-stage-title' }, text: 'The frame, driven live' }),
-          el('p', {
-            class: 'pg-stage__note',
-            text: 'Nothing here remounts the frame. Every control calls update() or writes a token, so the framed document keeps its state.',
-          }),
-        ]),
-        el('div', { class: 'pg-stage__actions' }, [expandButton, collapseButton, resetButton]),
-      ]),
-      el('div', { class: 'pg-stage__bar' }, [
-        columnsField.el,
+        el('h2', { attrs: { id: 'pg-stage-title' }, text: 'The frame, driven live' }),
         el('p', {
-          class: 'pg-stage__bar-note',
-          text: 'The frame is driven by the layout, not by a slider on its own width.',
+          class: 'pg-stage__note',
+          text: 'Nothing here remounts the frame: every control calls update() or writes a token.',
         }),
       ]),
-      layout,
+      statusSlot,
+      frameMount,
+      preview,
     ],
   )
 
@@ -1167,36 +933,29 @@ export function mountPlayground(container: HTMLElement): void {
   )
   dock.hidden = true
 
-  function group(title: string, note: string, body: HTMLElement): HTMLElement {
-    return el('section', { class: 'pg-group' }, [
-      el('h3', { class: 'pg-group__title', text: title }),
-      el('p', { class: 'pg-group__note', text: note }),
-      body,
-    ])
+  function groupBody(children: Child[]): HTMLElement {
+    return el('div', { class: 'pg-acc__body' }, children)
   }
 
-  function groupBody(children: Child[]): HTMLElement {
-    return el('div', { class: 'pg-group__body' }, children)
-  }
+  const recipeCode = el('pre', {
+    class: 'pg-recipe__code',
+    attrs: { tabindex: '0', 'aria-label': 'CSS for the selected recipe' },
+  })
 
   const collapseGroupBody = groupBody([
     affordanceField.el,
-    collapseOffsetField.el,
-    collapseSizeField.el,
-    collapseRadiusField.el,
-    collapseBorderWidthField.el,
-    collapseBlurField.el,
-    collapseSaturateField.el,
-    collapsePressScaleField.el,
-    collapseIconSizeField.el,
-    collapseIconStrokeField.el,
+    el('p', {
+      class: 'pg-note',
+      text: 'How the control looks is CSS now, not tokens. The Styling recipes in Appearance target the slot and the glyph the handle renders into.',
+    }),
   ])
 
-  const groups = el('div', { class: 'pg-groups' }, [
-    group(
-      'Sizing',
-      'What decides the inline height, and the bounds around it.',
-      groupBody([
+  const accordion = createAccordion([
+    {
+      id: 'sizing',
+      title: 'Sizing',
+      summary: 'What decides the inline height, and the bounds around it.',
+      body: groupBody([
         heightMode.el,
         heightPxField.el,
         heightLengthField.el,
@@ -1205,11 +964,12 @@ export function mountPlayground(container: HTMLElement): void {
         initialHeightField.el,
         initialHeightTokenField.el,
       ]),
-    ),
-    group(
-      'Behaviour',
-      'Timing, the expanded box and the host-side booleans.',
-      groupBody([
+    },
+    {
+      id: 'behaviour',
+      title: 'Behaviour',
+      summary: 'Timing, the expanded box and the host-side booleans.',
+      body: groupBody([
         resizeSettleField.el,
         resizeSafetyField.el,
         resizeEpsilonField.el,
@@ -1226,78 +986,90 @@ export function mountPlayground(container: HTMLElement): void {
           text: 'reportEpsilon belongs to the framed document: it is passed to createHugFrameChild() inside the frame, not to the host, so no control here can drive it.',
         }),
       ]),
-    ),
-    group(
-      'Appearance',
-      'The frame surface, its focus ring, the backdrop and the glass.',
-      groupBody([
-        radiusField.el,
-        radiusExpandedField.el,
-        borderWidthField.el,
+    },
+    {
+      id: 'appearance',
+      title: 'Appearance',
+      summary: 'The four colour tokens, and recipes that restyle the frame with your own CSS.',
+      body: groupBody([
         surfaceField.el,
         lineField.el,
         textField.el,
         accentField.el,
-        focusRingWidthField.el,
-        focusRingOffsetField.el,
-        backdropField.el,
-        backdropBlurField.el,
-        backdropSaturateField.el,
-        glassField.el,
-        glassLineField.el,
-        glassHoverField.el,
+        el('p', {
+          class: 'pg-note',
+          text: 'Four of the seven public tokens are colours; --hug-duration lives in Motion and --hug-initial-height in Sizing. --hug-z-index is engine-coupled, so the page reads it but never writes it. Radius, borders, shadows, the backdrop, the glass and the close control are plain literals in the stylesheet now — style them through the parts below.',
+        }),
+        recipeField.el,
+        recipeCode,
+        el('p', {
+          class: 'pg-note',
+          text: 'Each recipe is ordinary CSS against data-hug-part and the state attributes, scoped to this frame by a class on its container. The library ships inside @layer hugframe, so unlayered rules like these win with no !important — the accent recipe also reaches the expanded state.',
+        }),
       ]),
-    ),
-    group(
-      'Motion',
-      'The three durations and the two easings.',
-      groupBody([
+    },
+    {
+      id: 'motion',
+      title: 'Motion',
+      summary: 'The one duration token still left; the rest are literals in the stylesheet.',
+      body: groupBody([
         durationField.el,
-        durationFastField.el,
-        durationContentField.el,
-        easingField.el,
-        easingContentField.el,
+        el('p', {
+          class: 'pg-note',
+          text: 'The other durations and both easings were retired with the token surface; their values are literals in the stylesheet, so a control for them would write a property nothing reads.',
+        }),
       ]),
-    ),
-    group(
-      'Collapse control',
-      'Five ways to show the affordance. The picker moves into the dock while the frame is expanded, so you can swap the control and watch it happen without ever remounting the frame.',
-      collapseGroupBody,
-    ),
+    },
+    {
+      id: 'collapse',
+      title: 'Collapse control',
+      summary: 'Five ways to show the close control, previewed under the frame.',
+      body: collapseGroupBody,
+    },
   ])
 
-  const panels = el(
-    'section',
-    { class: 'pg-panels', attrs: { 'aria-labelledby': 'pg-controls-title' } },
-    [
-      el('h2', { attrs: { id: 'pg-controls-title' }, text: 'Every host-side setting, live' }),
-      el('p', {
-        class: 'pg-panels__note',
-        text: 'Defaults are shown beside each control, so you can see what you drifted from. Reset all returns everything at once.',
-      }),
-      groups,
-    ],
-  )
-
-  main.append(
-    el('section', { class: 'pg-lead' }, [
-      el('p', { class: 'pg-eyebrow', text: 'Playground' }),
-      el('h1', { text: 'Play with the frame, then watch what it does.' }),
-      el('p', {
-        class: 'pg-lead__body',
-        text: 'Expand and collapse it, change the layout around it, swap its height source, and turn every host option and theme token. The framed document is live the whole time.',
-      }),
+  const sidebar = el('aside', { class: 'pg-sidebar', attrs: { 'aria-label': 'Frame settings' } }, [
+    el('div', { class: 'pg-sidebar__inner' }, [
+      el('div', { class: 'pg-sidebar__top' }, [
+        modeField.el,
+        widthField.el,
+        el('div', { class: 'pg-sidebar__row' }, [
+          el('p', { class: 'pg-sidebar__note', text: 'Defaults sit beside each control.' }),
+          resetButton,
+        ]),
+      ]),
+      accordion.root,
     ]),
-    stage,
-    panels,
-    dock,
-  )
+  ])
+
+  const body = el('div', { class: 'pg-body' }, [stage, sidebar])
+
+  main.append(title, body, dock)
 
   container.append(header, main, footer)
+
+  // The sidebar is capped to what is left of the viewport once the masthead, the page
+  // title and the footer have taken their share, so a long control list scrolls inside
+  // itself instead of stretching the document.
+  const chromeParts = [header, title, footer]
+  const measureChrome = (): void => {
+    const height = chromeParts.reduce(
+      (total, node) => total + node.getBoundingClientRect().height,
+      0,
+    )
+    main.style.setProperty('--pg-chrome', `${Math.round(height)}px`)
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    const chromeObserver = new ResizeObserver(measureChrome)
+    for (const node of chromeParts) chromeObserver.observe(node)
+  }
+  measureChrome()
 
   // ---- refresh --------------------------------------------------------------------
 
   function syncControls(): void {
+    widthField.set(state.width)
+    recipeField.set(state.recipe)
     heightMode.set(state.heightMode)
     heightPxField.set(state.heightPx)
     heightLengthField.set(state.heightLength)
@@ -1317,36 +1089,11 @@ export function mountPlayground(container: HTMLElement): void {
     targetOriginField.set(state.targetOrigin)
     titleField.set(state.title)
     affordanceField.set(state.affordance)
-    radiusField.set(state.tokens.radius)
-    radiusExpandedField.set(state.tokens.radiusExpanded)
-    borderWidthField.set(state.tokens.borderWidth)
     surfaceField.set(state.tokens.surface)
     lineField.set(state.tokens.line)
     textField.set(state.tokens.text)
     accentField.set(state.tokens.accent)
-    focusRingWidthField.set(state.tokens.focusRingWidth)
-    focusRingOffsetField.set(state.tokens.focusRingOffset)
-    backdropField.set(state.tokens.backdrop)
-    backdropBlurField.set(state.tokens.backdropBlur)
-    backdropSaturateField.set(state.tokens.backdropSaturate)
-    glassField.set(state.tokens.glass)
-    glassLineField.set(state.tokens.glassLine)
-    glassHoverField.set(state.tokens.glassHover)
     durationField.set(state.tokens.duration)
-    durationFastField.set(state.tokens.durationFast)
-    durationContentField.set(state.tokens.durationContent)
-    easingField.set(state.tokens.easing)
-    easingContentField.set(state.tokens.easingContent)
-    collapseOffsetField.set(state.tokens.collapseOffset)
-    collapseSizeField.set(state.tokens.collapseSize)
-    collapseRadiusField.set(state.tokens.collapseRadius)
-    collapseBorderWidthField.set(state.tokens.collapseBorderWidth)
-    collapseBlurField.set(state.tokens.collapseBlur)
-    collapseSaturateField.set(state.tokens.collapseSaturate)
-    collapsePressScaleField.set(state.tokens.collapsePressScale)
-    collapseIconSizeField.set(state.tokens.collapseIconSize)
-    collapseIconStrokeField.set(state.tokens.collapseIconStroke)
-    columnsField.set(state.columns)
   }
 
   const iframe = frame.getIframe()

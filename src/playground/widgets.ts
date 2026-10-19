@@ -33,6 +33,8 @@ interface ShellParts {
   control: HTMLElement
   hint?: string
   defaultText: string
+  /** Overrides the "default …" note; use it for a control that mirrors live state. */
+  meta?: string
   labelIsInput?: boolean
 }
 
@@ -43,7 +45,9 @@ function shell(parts: ShellParts): HTMLElement {
   return el('div', { class: 'ctl' }, [
     el('div', { class: 'ctl__head' }, [
       label,
-      el('span', { class: 'ctl__meta' }, [el('span', { text: `default ${parts.defaultText}` })]),
+      el('span', { class: 'ctl__meta' }, [
+        el('span', { text: parts.meta ?? `default ${parts.defaultText}` }),
+      ]),
     ]),
     parts.control,
     parts.hint ? el('p', { class: 'ctl__hint', text: parts.hint }) : null,
@@ -318,10 +322,19 @@ export interface SegmentedSpec {
   label: string
   options: readonly SegmentOption[]
   value: string
+  /** Overrides the "default …" note; use it for a control that mirrors live state. */
+  meta?: string
   onInput: (value: string) => void
 }
 
 export function segmentedControl(spec: SegmentedSpec): Control<string> {
+  const apply = (value: string) => {
+    for (const { option, button } of buttons) {
+      const active = option.value === value
+      button.classList.toggle('is-active', active)
+      button.setAttribute('aria-pressed', active ? 'true' : 'false')
+    }
+  }
   const buttons = spec.options.map((option) => {
     const button = el('button', {
       class: 'segmented__btn',
@@ -329,6 +342,9 @@ export function segmentedControl(spec: SegmentedSpec): Control<string> {
       text: option.label,
       on: {
         click: () => {
+          // The pill must move on the click itself, not only when a caller happens to
+          // re-run set(): most groups repaint nothing but themselves.
+          apply(option.value)
           spec.onInput(option.value)
         },
       },
@@ -340,13 +356,6 @@ export function segmentedControl(spec: SegmentedSpec): Control<string> {
     { class: 'segmented', attrs: { role: 'group', 'aria-labelledby': spec.id } },
     buttons.map((item) => item.button),
   )
-  const apply = (value: string) => {
-    for (const { option, button } of buttons) {
-      const active = option.value === value
-      button.classList.toggle('is-active', active)
-      button.setAttribute('aria-pressed', active ? 'true' : 'false')
-    }
-  }
   apply(spec.value)
   return {
     el: el('div', { class: 'ctl' }, [
@@ -354,7 +363,9 @@ export function segmentedControl(spec: SegmentedSpec): Control<string> {
         el('span', { class: 'ctl__label', attrs: { id: spec.id }, text: spec.label }),
         el('span', {
           class: 'ctl__meta',
-          text: `default ${spec.options.find((option) => option.value === spec.value)?.label ?? ''}`,
+          text:
+            spec.meta ??
+            `default ${spec.options.find((option) => option.value === spec.value)?.label ?? ''}`,
         }),
       ]),
       group,
@@ -369,6 +380,7 @@ export interface SelectSpec {
   label: string
   value: string
   options: readonly { value: string; label: string }[]
+  meta?: string
   onInput: (value: string) => void
 }
 
@@ -388,6 +400,7 @@ export function selectControl(spec: SelectSpec): Control<string> {
       label: spec.label,
       control: select,
       defaultText: spec.options.find((option) => option.value === spec.value)?.label ?? spec.value,
+      meta: spec.meta,
       labelIsInput: true,
     }),
     default: spec.value,

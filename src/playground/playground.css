@@ -4,39 +4,19 @@
    so the two pages read as one site. */
 
 .pg {
-  max-width: var(--measure);
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 24px 96px;
+  padding: 14px 32px 40px;
 }
 
-.pg-lead {
-  padding: 56px 0 40px;
-  max-width: 720px;
-}
-
-.pg-eyebrow {
-  margin: 0 0 14px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.pg-lead h1 {
-  margin: 0;
+.pg-title {
+  margin: 0 0 16px;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(32px, 5.2vw, 52px);
-  line-height: 1.08;
+  font-size: 22px;
+  line-height: 1.2;
   letter-spacing: -0.01em;
-}
-
-.pg-lead__body {
-  margin: 20px 0 0;
-  font-size: 18px;
-  color: var(--muted);
-  max-width: 62ch;
 }
 
 .btn {
@@ -120,7 +100,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .pg-stage__head h2 {
@@ -137,66 +117,225 @@
   color: var(--muted);
 }
 
-.pg-stage__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.pg-status {
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
-.pg-stage__bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-  margin-bottom: 20px;
+.pg-status .pg-meter {
+  margin-top: 0;
 }
 
-.pg-stage__bar-note {
-  margin: 0;
-  font-size: 13px;
+/* The collapse-handle preview: a small canvas painted with the frame's own tokens, holding
+   the handle exactly as the engine builds it. It sits below the frame so the handle can be
+   tuned while the frame is still inline. */
+.pg-preview {
+  margin-top: 18px;
+}
+
+.pg-preview__title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.pg-preview__surface {
+  position: relative;
+  height: 92px;
+  /* A page-owned canvas, not a library part: it repeats the box's own literal radius and
+     takes the frame's surface and line tokens, so the handle preview matches the frame. */
+  border-radius: 14px;
+  background: var(--hug-surface);
+  box-shadow: inset 0 0 0 1px var(--hug-line);
+}
+
+.pg-preview__note {
+  margin: 8px 0 0;
+  font-size: 12px;
   color: var(--muted);
 }
 
-.pg-layout {
-  display: flex;
-  align-items: flex-start;
+/* The recipe snippet sits beside the recipe picker, so the selector and the frame it changes
+   are on screen together. Tab-reachable, because a <pre> with overflow needs a keyboard way in. */
+.pg-recipe__code {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre;
+  tab-size: 2;
 }
 
-.pg-frame-panel {
-  flex: 0 0 auto;
-  width: var(--frame-w);
-  min-width: 0;
-  transition: width 340ms cubic-bezier(0.33, 1, 0.68, 1);
+.pg-recipe__code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .pg-frame {
   width: 100%;
+  /* The width presets animate so the resize phase and its settle can be watched. */
+  transition: width 340ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-.pg-side {
-  flex: 0 0 auto;
-  width: var(--side-w);
-  margin-left: var(--side-gap);
+/* The two columns: the frame keeps the left, the controls keep the right. */
+.pg-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 28px;
+  align-items: start;
+}
+
+.pg-sidebar {
   min-width: 0;
+}
+
+/* Capped to what the viewport has left once the masthead, the page title and the footer
+   have taken theirs, so a long control list scrolls inside itself and never stretches the
+   document. --pg-chrome is measured from those three elements at runtime. */
+.pg-sidebar__inner {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: max(280px, calc(100dvh - var(--pg-chrome, 240px) - 32px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.pg-sidebar__top {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.pg-sidebar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pg-sidebar__note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Accordion --------------------------------------------------------------------- */
+
+.pg-acc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pg-acc__item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   overflow: hidden;
+}
+
+.pg-acc__heading {
+  margin: 0;
+  font-size: 16px;
+}
+
+.pg-acc__trigger {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.pg-acc__trigger:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.pg-acc__trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.pg-acc__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pg-acc__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.pg-acc__chev {
+  flex: none;
+  color: var(--muted);
+  transition: transform 180ms ease;
+}
+
+.pg-acc__trigger[aria-expanded='true'] .pg-acc__chev {
+  transform: rotate(90deg);
+}
+
+.pg-acc__summary {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pg-acc__panel {
+  padding: 2px 16px 18px;
+}
+
+.pg-acc__panel[hidden] {
+  display: none;
+}
+
+.pg-acc__body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition:
-    width 340ms cubic-bezier(0.33, 1, 0.68, 1),
-    margin-left 340ms cubic-bezier(0.33, 1, 0.68, 1),
-    opacity 300ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-.pg-layout[data-cols='3'] .pg-side {
-  opacity: 0;
+.pg-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 2px solid var(--accent);
+  background: var(--surface-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .pg-meter {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 22px;
-  margin-top: 18px;
   font-family: var(--font-mono);
   font-size: 13px;
 }
@@ -213,94 +352,6 @@
 
 .pg-meter__value {
   color: var(--text);
-}
-
-.pg-card {
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-}
-
-.pg-card h3 {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 500;
-}
-
-.pg-card__note {
-  margin: 0 0 14px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.pg-drive {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-/* Control panels ---------------------------------------------------------------- */
-
-.pg-panels {
-  margin-top: 56px;
-}
-
-.pg-panels h2 {
-  margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 28px;
-}
-
-.pg-panels__note {
-  margin: 0 0 24px;
-  max-width: 62ch;
-  color: var(--muted);
-}
-
-.pg-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 18px;
-  align-items: start;
-}
-
-.pg-group {
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-}
-
-.pg-group__title {
-  margin: 0 0 4px;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 500;
-}
-
-.pg-group__note {
-  margin: 0 0 18px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.pg-group__body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.pg-note {
-  margin: 0;
-  padding: 12px 14px;
-  border-left: 2px solid var(--accent);
-  background: var(--surface-2);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 /* The dock ---------------------------------------------------------------------
@@ -522,6 +573,7 @@
 
 .segmented__btn {
   appearance: none;
+  flex: 1 1 auto;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -529,6 +581,7 @@
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 999px;
+  text-align: center;
   cursor: pointer;
   transition:
     background-color 180ms ease,
@@ -545,79 +598,73 @@
   outline-offset: 2px;
 }
 
-/* The custom control the playground hands to renderCollapse; it positions itself the way
-   the built-in affordance does, and inherits the frame's collapse tokens. */
+/* The custom control the playground hands to renderCollapse. The library's
+   [data-hug-part='collapse'] slot positions it, so it only describes its own look. Radius,
+   border, fill, blur, hover, press and focus ring are literals: those tokens were retired
+   with the rest of the custom-property surface, and only the seven above remain. */
 .pg-collapse {
-  position: absolute;
-  top: max(var(--hug-collapse-offset), env(safe-area-inset-top));
-  right: max(var(--hug-collapse-offset), env(safe-area-inset-right));
-  z-index: var(--hug-collapse-z-index);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border: var(--hug-collapse-border-width) solid var(--hug-glass-line);
-  border-radius: var(--hug-collapse-radius);
-  background: var(--hug-glass);
-  -webkit-backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
-  backdrop-filter: blur(var(--hug-collapse-blur)) saturate(var(--hug-collapse-saturate));
+  border: 1px solid rgb(15 18 30 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 74%);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
   color: var(--hug-text);
   font-family: var(--font-body);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .pg-collapse:hover {
-  background: var(--hug-glass-hover);
+  background: rgb(255 255 255 / 94%);
 }
 
 .pg-collapse:active {
-  transform: scale(var(--hug-collapse-press-scale));
+  transform: scale(0.96);
 }
 
 .pg-collapse:focus-visible {
-  outline: var(--hug-focus-ring-width) solid var(--hug-accent);
-  outline-offset: var(--hug-collapse-focus-ring-offset);
+  outline: 2px solid var(--hug-accent);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pg-frame-panel,
-  .pg-side,
+  .pg-acc__trigger,
+  .pg-acc__chev,
   .segmented__btn,
   .ctl__switch-input,
-  .ctl__switch-input::after {
+  .ctl__switch-input::after,
+  .pg-frame,
+  .pg-collapse {
     transition: none;
   }
 }
 
-@media (max-width: 980px) {
-  .pg-layout {
-    display: block;
+/* Below this the two columns stack: the frame first, then the controls, which stop
+   being a sticky column and simply flow with the page. */
+@media (max-width: 960px) {
+  .pg-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
-  .pg-frame-panel,
-  .pg-side {
-    width: 100%;
-    margin-left: 0;
-    transition: none;
-  }
-
-  .pg-side {
-    margin-top: 20px;
-  }
-
-  .pg-layout[data-cols='3'] .pg-side {
-    opacity: 1;
+  .pg-sidebar__inner {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 
 @media (max-width: 620px) {
   .pg {
-    padding: 0 18px 72px;
-  }
-
-  .pg-lead {
-    padding: 40px 0 28px;
+    padding: 14px 18px 40px;
   }
 
   .pg-stage {
@@ -626,14 +673,6 @@
 
   .pg-stage__head {
     flex-direction: column;
-  }
-
-  .pg-panels h2 {
-    font-size: 24px;
-  }
-
-  .pg-groups {
-    grid-template-columns: 1fr;
   }
 
   .ctl__inline {
