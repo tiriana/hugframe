@@ -59,3 +59,25 @@ test('every entry point the manifest promises exists in the built output', async
 
   for (const target of targets) await access(join(root, target))
 })
+
+// Importing the package registers the <hug-frame> element. A consumer who writes
+// it in HTML may never reference the class, so a bundler that believes the module
+// is side-effect free would drop the registration and the element would silently
+// never upgrade.
+test('importing the package registers the element', async () => {
+  const [entry, manifest] = await Promise.all([
+    read('dist/index.js'),
+    read('package.json').then(JSON.parse),
+  ])
+
+  assert.match(
+    entry,
+    /customElements\.define\(\s*["']hug-frame["']/,
+    'the built entry should register the element',
+  )
+  assert.notEqual(
+    manifest.sideEffects,
+    false,
+    'claiming to be side-effect free would let a bundler drop the registration',
+  )
+})
