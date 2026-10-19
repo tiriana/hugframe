@@ -1,0 +1,173 @@
+.hug-root {
+  /* Must match HUGFRAME_Z_INDEX in core.ts. */
+  --hug-z-index: 2147483000;
+  --hug-radius: 14px;
+  --hug-duration: 460ms;
+  --hug-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --hug-duration-fast: 300ms;
+  --hug-duration-content: 260ms;
+  --hug-easing-content: cubic-bezier(0.33, 1, 0.68, 1);
+  --hug-shadow: 0 1px 2px rgb(15 18 30 / 8%), 0 18px 40px -20px rgb(15 18 30 / 32%);
+  --hug-line: #dfe3ea;
+  --hug-surface: #ffffff;
+  --hug-text: #14171f;
+  --hug-backdrop: rgb(12 15 24 / 44%);
+  --hug-backdrop-blur: 12px;
+  --hug-glass: rgb(255 255 255 / 74%);
+  --hug-glass-line: rgb(15 18 30 / 12%);
+  --hug-glass-hover: rgb(255 255 255 / 94%);
+  --hug-accent: #4b46e0;
+  --hug-accent-ink: #ffffff;
+
+  position: relative;
+  width: 100%;
+  z-index: 0;
+  color: var(--hug-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .hug-root {
+    --hug-shadow: 0 1px 2px rgb(0 0 0 / 48%), 0 24px 60px -24px rgb(0 0 0 / 68%);
+    --hug-line: #2b2f38;
+    --hug-surface: #171a20;
+    --hug-text: #ececea;
+    --hug-backdrop: rgb(4 5 8 / 62%);
+    --hug-glass: rgb(28 31 38 / 68%);
+    --hug-glass-line: rgb(255 255 255 / 14%);
+    --hug-glass-hover: rgb(38 42 50 / 88%);
+    --hug-accent: #9b94ff;
+    --hug-accent-ink: #12131a;
+  }
+}
+
+.hug-root[data-mode='expanded'] {
+  z-index: var(--hug-z-index);
+}
+
+.hug-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--hug-z-index) - 1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  background: var(--hug-backdrop);
+  -webkit-backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(0.82);
+  backdrop-filter: blur(var(--hug-backdrop-blur)) saturate(0.82);
+  transition:
+    opacity var(--hug-duration-fast) var(--hug-easing),
+    visibility 0s linear var(--hug-duration-fast);
+}
+
+.hug-root[data-mode='expanded'] .hug-backdrop {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity var(--hug-duration-fast) var(--hug-easing),
+    visibility 0s;
+}
+
+.hug-box {
+  position: relative;
+  z-index: var(--hug-z-index);
+  width: 100%;
+  height: var(--hug-initial-height, 240px);
+  overflow: hidden;
+  background: var(--hug-surface);
+  border-radius: var(--hug-radius);
+  box-shadow:
+    inset 0 0 0 1px var(--hug-line),
+    var(--hug-shadow);
+  transition:
+    height var(--hug-duration-content) var(--hug-easing-content),
+    border-radius var(--hug-duration-fast) var(--hug-easing),
+    box-shadow var(--hug-duration-fast) var(--hug-easing);
+}
+
+.hug-root[data-sizing='fixed'] .hug-box {
+  transition:
+    height var(--hug-duration) var(--hug-easing),
+    border-radius var(--hug-duration-fast) var(--hug-easing),
+    box-shadow var(--hug-duration-fast) var(--hug-easing);
+}
+
+.hug-root[data-phase='resizing'] .hug-box {
+  transition:
+    height var(--hug-duration-content) var(--hug-easing-content),
+    border-radius var(--hug-duration-fast) var(--hug-easing),
+    box-shadow var(--hug-duration-fast) var(--hug-easing);
+}
+
+.hug-root[data-phase='expanding'] .hug-box,
+.hug-root[data-phase='collapsing'] .hug-box {
+  transition:
+    top var(--hug-duration) var(--hug-easing),
+    left var(--hug-duration) var(--hug-easing),
+    width var(--hug-duration) var(--hug-easing),
+    height var(--hug-duration) var(--hug-easing),
+    border-radius var(--hug-duration-fast) var(--hug-easing),
+    box-shadow var(--hug-duration-fast) var(--hug-easing);
+}
+
+.hug-root[data-mode='expanded'] .hug-box {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hug-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.hug-frame:focus-visible {
+  outline: 2px solid var(--hug-accent);
+  outline-offset: -2px;
+}
+
+.hug-collapse {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--hug-glass-line);
+  border-radius: 999px;
+  background: var(--hug-glass);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  color: var(--hug-text);
+  cursor: pointer;
+  transition:
+    background var(--hug-duration-fast) var(--hug-easing),
+    transform var(--hug-duration-fast) var(--hug-easing);
+}
+
+.hug-collapse:hover {
+  background: var(--hug-glass-hover);
+}
+
+.hug-collapse:active {
+  transform: scale(0.94);
+}
+
+.hug-collapse:focus-visible {
+  outline: 2px solid var(--hug-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hug-box,
+  .hug-backdrop,
+  .hug-collapse {
+    transition: none;
+  }
+}
