@@ -141,11 +141,14 @@
   font-size: 15px;
 }
 
+/* The frame's own surface, painted by a page-owned canvas. The element also carries the
+   library's `hug-root` class, so the surface and line tokens — and their dark-scheme values —
+   resolve here exactly as they do on the frame. */
 .pg-preview__surface {
   position: relative;
   height: 92px;
-  /* A page-owned canvas, not a library part: it repeats the box's own literal radius and
-     takes the frame's surface and line tokens, so the handle preview matches the frame. */
+  /* It repeats the box's own literal radius and takes the frame's surface and line tokens,
+     so the handle preview matches the frame in either scheme. */
   border-radius: 14px;
   background: var(--hug-surface);
   box-shadow: inset 0 0 0 1px var(--hug-line);
@@ -600,16 +603,16 @@
 
 /* The custom control the playground hands to renderCollapse. The library's
    [data-hug-part='collapse'] slot positions it, so it only describes its own look. Radius,
-   border, fill, blur, hover, press and focus ring are literals: those tokens were retired
-   with the rest of the custom-property surface, and only the seven above remain. */
+   blur, hover, press and focus ring are literals; its fill, hairline and text derive from the
+   frame's own tokens, so on either scheme it reads as a control on the frame's surface. */
 .pg-collapse {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border: 1px solid rgb(15 18 30 / 12%);
+  border: 1px solid color-mix(in srgb, var(--hug-text) 14%, transparent);
   border-radius: 999px;
-  background: rgb(255 255 255 / 74%);
+  background: color-mix(in srgb, var(--hug-surface) 72%, transparent);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
   backdrop-filter: blur(10px) saturate(1.1);
   color: var(--hug-text);
@@ -623,7 +626,7 @@
 }
 
 .pg-collapse:hover {
-  background: rgb(255 255 255 / 94%);
+  background: color-mix(in srgb, var(--hug-surface) 92%, transparent);
 }
 
 .pg-collapse:active {

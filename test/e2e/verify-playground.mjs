@@ -338,5 +338,43 @@ check(
 
 check('no console errors on the playground', errors.length === 0, errors.slice(0, 2).join(' ; '))
 
+// The page must follow the colour scheme in force. A colour written as an inline
+// token on the frame outranks the library's own dark-scheme rule, which once
+// pinned the frame's surface and the preview canvas to white on a dark machine.
+const schemeSample = async (colorScheme) => {
+  const probe = await browser.newPage({
+    viewport: { width: 1500, height: 950 },
+    colorScheme,
+  })
+  await probe.goto(`${BASE}/playground/`, { waitUntil: 'load' })
+  await probe.waitForTimeout(1200)
+  const sample = await probe.evaluate(() => {
+    const root = document.querySelector('.hug-root')
+    const box = document.querySelector('.hug-box')
+    const preview = document.querySelector('.pg-preview__surface')
+    const background = (element) => (element ? getComputedStyle(element).backgroundColor : null)
+    return {
+      token: getComputedStyle(root).getPropertyValue('--hug-surface').trim(),
+      box: background(box),
+      preview: background(preview),
+    }
+  })
+  await probe.close()
+  return sample
+}
+
+const inLight = await schemeSample('light')
+const inDark = await schemeSample('dark')
+check(
+  'the frame surface follows the active colour scheme rather than a pinned colour',
+  inDark.box !== inLight.box && inDark.token !== inLight.token,
+  JSON.stringify({ light: inLight, dark: inDark }),
+)
+check(
+  'the collapse preview canvas matches the frame surface in both schemes',
+  inDark.preview === inDark.box && inLight.preview === inLight.box,
+  JSON.stringify({ light: inLight, dark: inDark }),
+)
+
 await browser.close()
 finish()

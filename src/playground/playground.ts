@@ -47,6 +47,24 @@ interface Tokens {
 
 type TokenKey = keyof Tokens
 
+/*
+ * The four colour tokens are theme-dependent: the library declares a light value and a
+ * `prefers-color-scheme: dark` override on `.hug-root`. The page must not seed the controls
+ * from fixed light literals, so the effective values are read off the mounted root and used
+ * both as the controls' starting point and as the value Reset returns to.
+ */
+type ColourKey = 'surface' | 'line' | 'text' | 'accent'
+const COLOUR_KEYS: readonly ColourKey[] = ['surface', 'line', 'text', 'accent']
+type ThemeColours = Record<ColourKey, string>
+
+// Only a fallback for the instant before the frame is mounted and its theme can be read.
+const FALLBACK_THEME: ThemeColours = {
+  surface: '#ffffff',
+  line: '#dfe3ea',
+  text: '#14171f',
+  accent: '#4b46e0',
+}
+
 interface PlaygroundState {
   width: 'full' | 'wide' | 'half' | 'compact'
   recipe: RecipeId
@@ -190,7 +208,7 @@ const WIDTH_PRESETS: Record<PlaygroundState['width'], string> = {
   compact: '340px',
 }
 
-function defaults(): PlaygroundState {
+function defaults(theme: ThemeColours): PlaygroundState {
   return {
     width: 'full',
     recipe: 'none',
@@ -213,14 +231,36 @@ function defaults(): PlaygroundState {
     title: 'Playground app',
     affordance: 'default',
     tokens: {
-      surface: '#ffffff',
-      line: '#dfe3ea',
-      text: '#14171f',
-      accent: '#4b46e0',
+      surface: theme.surface,
+      line: theme.line,
+      text: theme.text,
+      accent: theme.accent,
       duration: 460,
       initialHeightToken: 240,
     },
   }
+}
+
+// getComputedStyle reports a custom property as the token stream it resolves to, which for
+// the library is hex. A consumer's own value could arrive as rgb(), and a colour input only
+// takes hex, so normalise before it reaches a control.
+function cssColorToHex(value: string, fallback: string): string {
+  const trimmed = value.trim()
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed.toLowerCase()
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+    return `#${trimmed
+      .slice(1)
+      .split('')
+      .map((char) => char + char)
+      .join('')}`.toLowerCase()
+  }
+  const match = trimmed.match(/^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i)
+  if (!match) return fallback
+  const hex = match
+    .slice(1, 4)
+    .map((part) => Number.parseInt(part, 10).toString(16).padStart(2, '0'))
+    .join('')
+  return `#${hex}`
 }
 
 function resolveHeight(state: PlaygroundState): HugFrameHeight {
@@ -330,7 +370,11 @@ function meterItem(label: string): MeterItem {
 }
 
 export function mountPlayground(container: HTMLElement): void {
-  const state = defaults()
+  const state = defaults(FALLBACK_THEME)
+  // Colour tokens the reader has actually changed. Until one is touched the page writes
+  // nothing, so the library's own value — and its dark-scheme override — governs the frame.
+  const touchedColours = new Set<ColourKey>()
+  let theme: ThemeColours = { ...FALLBACK_THEME }
   let mode: HugFrameMode = 'inline'
   let phase: HugFramePhase = 'idle'
   let sizing: HugFrameSizing = 'content'
@@ -403,6 +447,28 @@ export function mountPlayground(container: HTMLElement): void {
       renderMeter()
     },
   })
+
+  // The mounted root has resolved the library's tokens for the active scheme, and the page
+  // has not written a colour token yet, so this is the theme actually in effect.
+  const readTheme = (): ThemeColours => {
+    const computed = getComputedStyle(frame.element)
+    return {
+      surface: cssColorToHex(computed.getPropertyValue('--hug-surface'), FALLBACK_THEME.surface),
+      line: cssColorToHex(computed.getPropertyValue('--hug-line'), FALLBACK_THEME.line),
+      text: cssColorToHex(computed.getPropertyValue('--hug-text'), FALLBACK_THEME.text),
+      accent: cssColorToHex(computed.getPropertyValue('--hug-accent'), FALLBACK_THEME.accent),
+    }
+  }
+
+  // Adopt the active scheme for every colour the reader has not overridden, so the controls
+  // start from what the library resolves to instead of a fixed light literal.
+  const adoptTheme = (): void => {
+    theme = readTheme()
+    for (const key of COLOUR_KEYS) {
+      if (touchedColours.has(key)) continue
+      state.tokens[key] = theme[key]
+    }
+  }
 
   function renderMeter(): void {
     heightItem.label.textContent = sizing === 'fixed' ? 'frame height' : 'content height'
@@ -639,6 +705,7 @@ export function mountPlayground(container: HTMLElement): void {
     value: state.tokens.surface,
     onInput: (value) => {
       state.tokens.surface = value
+      touchedColours.add('surface')
       commit()
     },
   })
@@ -648,6 +715,7 @@ export function mountPlayground(container: HTMLElement): void {
     value: state.tokens.line,
     onInput: (value) => {
       state.tokens.line = value
+      touchedColours.add('line')
       commit()
     },
   })
@@ -657,6 +725,7 @@ export function mountPlayground(container: HTMLElement): void {
     value: state.tokens.text,
     onInput: (value) => {
       state.tokens.text = value
+      touchedColours.add('text')
       commit()
     },
   })
@@ -666,6 +735,7 @@ export function mountPlayground(container: HTMLElement): void {
     value: state.tokens.accent,
     onInput: (value) => {
       state.tokens.accent = value
+      touchedColours.add('accent')
       commit()
     },
   })
@@ -792,9 +862,16 @@ export function mountPlayground(container: HTMLElement): void {
     for (const key of Object.keys(TOKEN_VARS) as TokenKey[]) {
       const def = TOKEN_VARS[key]
       const value = def.css(state.tokens[key])
-      frame.element.style.setProperty(def.name, value)
-      // The preview carries the same tokens, since it sits outside the frame's own tree.
-      previewSurface.style.setProperty(def.name, value)
+      const isColour = COLOUR_KEYS.includes(key as ColourKey)
+      // An untouched colour token is left to the library's own declaration, so the frame and
+      // the preview keep following the active scheme; a touched one is written to both.
+      const overridden = isColour && touchedColours.has(key as ColourKey)
+      // The preview carries the same tokens, since it sits outside the frame's own tree but is
+      // itself a `.hug-root`, so the library's declaration reaches it too.
+      for (const node of [frame.element, previewSurface]) {
+        if (isColour && !overridden) node.style.removeProperty(def.name)
+        else node.style.setProperty(def.name, value)
+      }
     }
   }
 
@@ -854,14 +931,22 @@ export function mountPlayground(container: HTMLElement): void {
     text: 'Reset all',
     on: {
       click: () => {
-        Object.assign(state, defaults())
+        // Drop the page's colour overrides first, so the theme is read from the library's own
+        // declarations rather than from the values the reader had pinned.
+        touchedColours.clear()
+        applyTokens()
+        adoptTheme()
+        Object.assign(state, defaults(theme))
         syncControls()
         applyAll()
       },
     },
   })
 
-  const previewSurface = el('div', { class: 'pg-preview__surface' })
+  // The preview is a page-owned canvas, but it is given the library's `hug-root` class so the
+  // four colour tokens and the dark-scheme override resolve on it exactly as they do on the
+  // frame. It then paints the frame's own surface and edge instead of a hardcoded light panel.
+  const previewSurface = el('div', { class: 'hug-root pg-preview__surface' })
   const previewNote = el('p', { class: 'pg-preview__note' })
   const preview = el(
     'section',
@@ -1106,6 +1191,21 @@ export function mountPlayground(container: HTMLElement): void {
   }
 
   uiReady = true
+  // The frame is in the document now, so its computed tokens are the theme in effect; seed
+  // the colour controls from them before the first paint.
+  adoptTheme()
+  syncControls()
   applyAll()
   syncExpanded()
+
+  // If the OS scheme changes while the page is open, re-read the library's values for every
+  // colour the reader has not overridden, so an untouched panel keeps matching its theme.
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    adoptTheme()
+    surfaceField.set(state.tokens.surface)
+    lineField.set(state.tokens.line)
+    textField.set(state.tokens.text)
+    accentField.set(state.tokens.accent)
+    applyTokens()
+  })
 }
