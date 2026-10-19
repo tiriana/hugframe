@@ -1,7 +1,7 @@
 {
   "name": "hugframe",
   "version": "0.0.0",
-  "description": "An iframe that hugs its content, then morphs into a chromeless full-window view. No dependencies.",
+  "description": "An iframe that sizes itself to its content and morphs into a chromeless full-window view. Dependency-free TypeScript, cross-domain over postMessage.",
   "license": "MIT",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -13,16 +13,22 @@
   "bugs": {
     "url": "https://github.com/tiriana/hugframe/issues"
   },
-  "homepage": "https://github.com/tiriana/hugframe#readme",
+  "homepage": "https://tiriana.github.io/hugframe/",
   "keywords": [
     "iframe",
-    "embed",
+    "auto-height",
+    "iframe-resize",
     "resize",
-    "autoresize",
+    "responsive",
+    "embed",
     "postmessage",
-    "fullscreen",
+    "cross-domain",
     "custom-element",
-    "no-dependencies"
+    "web-component",
+    "fullscreen",
+    "micro-frontend",
+    "typescript",
+    "zero-dependencies"
   ],
   "files": [
     "dist"
