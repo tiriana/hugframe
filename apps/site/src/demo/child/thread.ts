@@ -1,6 +1,6 @@
 import { clear, el } from '@/demo/dom'
-import type { HugFrameChild } from '@/lib/child'
-import type { HugFrameMode } from '@/lib/protocol'
+import type { HugFrameChild } from 'hugframe/child'
+import type { HugFrameMode } from 'hugframe'
 import type { Thread } from './data'
 import { createModeButton } from './modeButton'
 

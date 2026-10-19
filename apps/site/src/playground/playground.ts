@@ -1,16 +1,15 @@
-import { createHugFrame } from '@/lib/core'
-// The playground drives the engine through createHugFrame, but imports the element
-// module the way a consumer's `import 'hugframe'` would, so <hug-frame> is registered too.
-import '@/lib/element'
+// Importing the package registers <hug-frame> as a side effect, the same way a
+// consumer's `import 'hugframe'` does.
+import { buildCollapseAffordance, createHugFrame } from 'hugframe'
 import type {
   HugFrameCollapseHandle,
   HugFrameHeight,
   HugFrameInstance,
+  HugFrameMode,
   HugFrameOptions,
   HugFramePhase,
-} from '@/lib/types'
-import type { HugFrameMode, HugFrameSizing } from '@/lib/protocol'
-import { buildCollapseAffordance } from '@/lib/template'
+  HugFrameSizing,
+} from 'hugframe'
 import { createAccordion } from '@/playground/accordion'
 import { el, svg, type Child } from '@/playground/dom'
 import {

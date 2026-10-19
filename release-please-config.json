@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "bootstrap-sha": "3c5e53f696509b5f7d9d13f4d2677beaf5168354",
+  "separate-pull-requests": false,
+  "packages": {
+    "packages/hugframe": {
+      "component": "hugframe"
+    }
+  }
+}

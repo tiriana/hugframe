@@ -1,5 +1,5 @@
 import { el, svg } from '@/demo/dom'
-import type { HugFrameChild } from '@/lib/child'
+import type { HugFrameChild } from 'hugframe/child'
 
 export function createModeButton(child: HugFrameChild): HTMLButtonElement {
   const icon = svg(
