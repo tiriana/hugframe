@@ -1,6 +1,6 @@
 .hug-root {
-  /* Must match HUGFRAME_Z_INDEX in core.ts. */
-  --hug-z-index: 2147483000;
+  /* Must match HUGFRAME_Z_INDEX in core.ts, and stay short: CSS minifiers round long numeric literals. */
+  --hug-z-index: 1000000000;
   --hug-radius: 14px;
   --hug-duration: 460ms;
   --hug-easing: cubic-bezier(0.22, 1, 0.36, 1);

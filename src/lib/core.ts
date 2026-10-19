@@ -22,7 +22,10 @@ import { buildCollapseAffordance, createHugFrameTemplate } from './template'
 import type { HugFrameInstance, HugFrameOptions, HugFramePhase } from './types'
 
 /** Default stacking level for the morph. Must match `--hug-z-index` in hugframe.css. */
-export const HUGFRAME_Z_INDEX = 2147483000
+// Few significant digits on purpose: CSS minifiers, Lightning CSS included, round
+// longer numeric literals, which would leave the shipped stylesheet disagreeing
+// with this constant. test/dist.test.js guards the pair.
+export const HUGFRAME_Z_INDEX = 1000000000
 
 const RESIZE_SETTLE_MS = 120
 const RESIZE_SAFETY_MS = 400
