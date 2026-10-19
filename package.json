@@ -4,6 +4,8 @@
   "description": "An iframe that hugs its content, then morphs into a chromeless full-window view. No dependencies.",
   "license": "MIT",
   "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tiriana/hugframe.git"
@@ -44,6 +46,9 @@
     "build:js": "vite build --config vite.lib.config.ts",
     "build:css": "node scripts/copy-css.mjs",
     "build:demo": "vite build --outDir .demo-dist",
+    "build:demo:pages": "vite build --outDir .demo-dist --base=/hugframe/",
+    "build:docs": "node scripts/build-docs.mjs",
+    "build:pages": "npm run build:demo:pages && npm run build:docs && node scripts/assemble-pages.mjs",
     "pretest": "npm run build",
     "test": "node --test \"test/*.test.*\"",
     "release": "semantic-release",
@@ -63,7 +68,9 @@
     "@types/node": "^24.19.2",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "husky": "^9.1.7",
+    "lightningcss": "^1.33.0",
     "lint-staged": "^17.6.0",
+    "marked": "^15.0.12",
     "prettier": "^3.9.10",
     "semantic-release": "^25.0.9",
     "typescript": "~7.0.2",
