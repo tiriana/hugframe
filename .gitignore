@@ -31,3 +31,7 @@ htmlcov/
 
 # Demo build output
 .demo-dist/
+
+# Pages site output
+.pages/
+.api-docs/
