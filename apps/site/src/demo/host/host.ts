@@ -1,6 +1,6 @@
 import { el } from '@/demo/dom'
-import { createHugFrame } from '@/lib/core'
-import type { HugFrameMode } from '@/lib/protocol'
+import { createHugFrame } from 'hugframe'
+import type { HugFrameMode } from 'hugframe'
 import chromeHtml from '@/site/chrome.html?raw'
 
 type HugFrameInstance = ReturnType<typeof createHugFrame>

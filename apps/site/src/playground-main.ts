@@ -1,5 +1,5 @@
 import { mountPlayground } from '@/playground/playground'
-import '@/lib/hugframe.css'
+import 'hugframe/css'
 import '@/demo/theme.css'
 import '@/site/site.css'
 import '@/playground/playground.css'

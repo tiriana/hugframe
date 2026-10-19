@@ -1,5 +1,5 @@
 import { el } from '@/demo/dom'
-import { createHugFrameChild } from '@/lib/child'
+import { createHugFrameChild } from 'hugframe/child'
 import { makeInitialThreads, makeThread } from './data'
 import { createStatusApp, type StatusApp } from './status'
 import { createThreadApp, type ThreadApp, type ThreadAppState } from './thread'

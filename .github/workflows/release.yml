@@ -6,8 +6,8 @@ on:
       - main
 
 permissions:
-  # The release itself is created through the GitHub API, and the publish
-  # workflow is dispatched explicitly at the end of this job.
+  # release-please opens the Release PR and creates the tags and releases through
+  # the API; the publish workflow is dispatched explicitly at the end of this job.
   contents: write
   issues: write
   pull-requests: write
@@ -26,10 +26,10 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v7
         with:
-          # semantic-release walks the full tag history to find the last release.
+          # release-please walks the full history to find the last release.
           fetch-depth: 0
-          # The release is created through the GitHub API, so the workflow
-          # does not need git credentials left behind on the checkout.
+          # The Release PR, the tags and the releases are all created through the
+          # API, so the workflow does not need git credentials left behind.
           persist-credentials: false
 
       - name: Set up Node.js
@@ -38,31 +38,27 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Install release tooling
+      - name: Install dependencies
         run: npm ci
 
-      - name: Note the current release
-        id: before
-        run: echo "tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || echo none)" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Release
-        run: npx semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Note the new release
-        id: after
-        run: echo "tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || echo none)" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
       # A release created with the default GITHUB_TOKEN does not trigger the
-      # `release: published` event, so the publish workflow is dispatched here
-      # instead. workflow_dispatch is exempt from that restriction.
-      - name: Publish the new release
-        if: steps.after.outputs.tag != 'none' && steps.after.outputs.tag != steps.before.outputs.tag
-        run: gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --field tag="${{ steps.after.outputs.tag }}"
+      # `release: published` event, and npm trusted publishing is bound to the
+      # publish workflow by filename, so each released tag is dispatched here.
+      - name: Publish the released packages
+        if: steps.release.outputs.releases_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PATHS_RELEASED: ${{ steps.release.outputs.paths_released }}
+        run: |
+          node scripts/released-tags.mjs | while read -r tag; do
+            echo "::notice::dispatching the publish workflow for ${tag}"
+            gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --field "tag=${tag}"
+          done
