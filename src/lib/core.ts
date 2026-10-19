@@ -30,6 +30,9 @@ export const HUGFRAME_Z_INDEX = 1000000000
 const RESIZE_SETTLE_MS = 120
 const RESIZE_SAFETY_MS = 400
 const RESIZE_WIDTH_EPSILON = 1
+const MORPH_SETTLE_MARGIN_MS = 90
+const EXPANDED_WIDTH = '100vw'
+const EXPANDED_HEIGHT = '100dvh'
 
 export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
   const template = createHugFrameTemplate(options)
@@ -185,11 +188,11 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     if (kind === 'expanding') {
       box.style.top = '0px'
       box.style.left = '0px'
-      box.style.width = '100vw'
-      box.style.height = '100dvh'
+      box.style.width = opts.expandedWidth ?? EXPANDED_WIDTH
+      box.style.height = opts.expandedHeight ?? EXPANDED_HEIGHT
       host.style.height = `${inlineHeight}px`
       setPhase('idle')
-      template.iframe.focus()
+      if (opts.manageFocus !== false) template.iframe.focus()
       return
     }
     box.style.position = ''
@@ -205,7 +208,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     lastWidth = box.getBoundingClientRect().width
     const returnTo = focusReturn
     focusReturn = null
-    returnTo?.focus()
+    if (opts.manageFocus !== false) returnTo?.focus()
   }
 
   function armSettle(kind: HugFramePhase): void {
@@ -231,7 +234,10 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
       finishMorph(kind)
     }
 
-    const timer = window.setTimeout(settle, duration + 90)
+    const timer = window.setTimeout(
+      settle,
+      duration + (opts.morphSettleMarginMs ?? MORPH_SETTLE_MARGIN_MS),
+    )
     box.addEventListener('transitionend', onTransitionEnd)
     settleCancel = cleanup
   }
@@ -242,8 +248,8 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     clearResizeTimers()
     appliedMode = 'expanded'
     const active = document.activeElement
-    focusReturn = active instanceof HTMLElement ? active : null
-    setLock(true)
+    focusReturn = opts.manageFocus !== false && active instanceof HTMLElement ? active : null
+    if (opts.lockScroll !== false) setLock(true)
     const rect = template.box.getBoundingClientRect()
     inlineHeight = rect.height
     template.root.style.height = `${rect.height}px`
@@ -259,8 +265,8 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
       const box = template.box
       box.style.top = '0px'
       box.style.left = '0px'
-      box.style.width = '100vw'
-      box.style.height = '100dvh'
+      box.style.width = opts.expandedWidth ?? EXPANDED_WIDTH
+      box.style.height = opts.expandedHeight ?? EXPANDED_HEIGHT
     })
     armSettle('expanding')
   }
@@ -294,9 +300,9 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
 
   function armResizeTimers(): void {
     if (resizeSettleTimer !== null) window.clearTimeout(resizeSettleTimer)
-    resizeSettleTimer = window.setTimeout(settleResize, RESIZE_SETTLE_MS)
+    resizeSettleTimer = window.setTimeout(settleResize, opts.resizeSettleMs ?? RESIZE_SETTLE_MS)
     if (resizeSafetyTimer === null) {
-      resizeSafetyTimer = window.setTimeout(settleResize, RESIZE_SAFETY_MS)
+      resizeSafetyTimer = window.setTimeout(settleResize, opts.resizeSafetyMs ?? RESIZE_SAFETY_MS)
     }
   }
 
@@ -321,7 +327,11 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     const width = template.box.getBoundingClientRect().width
     const previous = lastWidth
     lastWidth = width
-    if (previous === null || Math.abs(width - previous) <= RESIZE_WIDTH_EPSILON) return
+    if (
+      previous === null ||
+      Math.abs(width - previous) <= (opts.resizeWidthEpsilon ?? RESIZE_WIDTH_EPSILON)
+    )
+      return
     if (phase === 'resizing') armResizeTimers()
     else beginResize()
   }
@@ -386,7 +396,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     mode = next
     template.setMode(next)
     syncCollapse()
-    bindEscape(next === 'expanded')
+    bindEscape(next === 'expanded' && opts.collapseOnEscape !== false)
     emitModeChange(next)
     if (next === 'expanded') beginExpand()
     else beginCollapse()
@@ -424,6 +434,18 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     if (has('initialMode') && opts.initialMode !== undefined) requestMode(opts.initialMode)
     if (has('height') || has('minHeight') || has('maxHeight') || has('initialHeight')) {
       applyInlineHeight()
+    }
+    if (has('lockScroll')) setLock(mode === 'expanded' && opts.lockScroll !== false)
+    if (has('collapseOnEscape')) {
+      bindEscape(mode === 'expanded' && opts.collapseOnEscape !== false)
+    }
+    if (
+      (has('expandedWidth') || has('expandedHeight')) &&
+      mode === 'expanded' &&
+      phase === 'idle'
+    ) {
+      template.box.style.width = opts.expandedWidth ?? EXPANDED_WIDTH
+      template.box.style.height = opts.expandedHeight ?? EXPANDED_HEIGHT
     }
   }
 
@@ -470,7 +492,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     }
 
     window.addEventListener('message', handleMessage)
-    bindEscape(mode === 'expanded')
+    bindEscape(mode === 'expanded' && opts.collapseOnEscape !== false)
 
     if (mode === 'expanded') {
       syncCollapse()

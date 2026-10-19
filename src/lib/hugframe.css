@@ -33,6 +33,8 @@
   --hug-collapse-saturate: 1.1;
   --hug-collapse-press-scale: 0.94;
   --hug-collapse-focus-ring-offset: 2px;
+  --hug-collapse-icon-size: 18px;
+  --hug-collapse-icon-stroke: 1.6;
 
   position: relative;
   width: 100%;
@@ -171,6 +173,15 @@
 
 .hug-collapse:active {
   transform: scale(var(--hug-collapse-press-scale));
+}
+
+.hug-collapse svg {
+  width: var(--hug-collapse-icon-size);
+  height: var(--hug-collapse-icon-size);
+}
+
+.hug-collapse svg path {
+  stroke-width: var(--hug-collapse-icon-stroke);
 }
 
 .hug-collapse:focus-visible {

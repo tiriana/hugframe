@@ -17,6 +17,8 @@ export interface HugFrameChildOptions {
   sizeSelector?: string
   /** constant px added to every reported height; default 0 */
   offsetHeight?: number
+  /** px deadband below which a measured size change is not reported; default 0.5 */
+  reportEpsilon?: number
   onMessage?: (payload: unknown) => void
   onModeChange?: (mode: HugFrameMode) => void
   onSizingChange?: (sizing: HugFrameSizing) => void
@@ -57,6 +59,7 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
     targetOrigin = '*',
     sizeSelector = ROOT_ELEMENT_SELECTOR,
     offsetHeight = 0,
+    reportEpsilon = 0.5,
     onMessage,
     onModeChange,
     onSizingChange,
@@ -92,8 +95,8 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
     if (
       !force &&
       lastSize !== null &&
-      Math.abs(next.height - lastSize.height) < 0.5 &&
-      Math.abs(next.width - lastSize.width) < 0.5
+      Math.abs(next.height - lastSize.height) < reportEpsilon &&
+      Math.abs(next.width - lastSize.width) < reportEpsilon
     ) {
       return
     }

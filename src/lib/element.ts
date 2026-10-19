@@ -14,6 +14,12 @@ const OBSERVED_ATTRIBUTES = [
   'min-height',
   'max-height',
   'initial-height',
+  'resize-settle-ms',
+  'resize-safety-ms',
+  'resize-width-epsilon',
+  'morph-settle-margin-ms',
+  'expanded-width',
+  'expanded-height',
 ]
 
 function parseHeight(value: string | null): HugFrameHeight | undefined {
@@ -42,6 +48,9 @@ export class HugFrameElement extends ElementBase {
   #collapseIcon: Node | string | undefined = undefined
   #renderCollapse: HugFrameOptions['renderCollapse'] = undefined
   #iframeProps: HugFrameOptions['iframeProps'] = undefined
+  #lockScroll: boolean | undefined = undefined
+  #manageFocus: boolean | undefined = undefined
+  #collapseOnEscape: boolean | undefined = undefined
 
   #onModeChangeEvent = (event: Event): void => {
     const detail = (event as CustomEvent<{ mode?: HugFrameMode }>).detail
@@ -95,6 +104,24 @@ export class HugFrameElement extends ElementBase {
       case 'initial-height':
         instance.update({ initialHeight: parseNumber(value) })
         return
+      case 'resize-settle-ms':
+        instance.update({ resizeSettleMs: parseNumber(value) })
+        return
+      case 'resize-safety-ms':
+        instance.update({ resizeSafetyMs: parseNumber(value) })
+        return
+      case 'resize-width-epsilon':
+        instance.update({ resizeWidthEpsilon: parseNumber(value) })
+        return
+      case 'morph-settle-margin-ms':
+        instance.update({ morphSettleMarginMs: parseNumber(value) })
+        return
+      case 'expanded-width':
+        instance.update({ expandedWidth: value ?? undefined })
+        return
+      case 'expanded-height':
+        instance.update({ expandedHeight: value ?? undefined })
+        return
     }
   }
 
@@ -105,6 +132,81 @@ export class HugFrameElement extends ElementBase {
   set mode(value: HugFrameMode) {
     if (value === 'expanded') this.expand()
     else this.collapse()
+  }
+
+  get resizeSettleMs(): number | undefined {
+    return parseNumber(this.getAttribute('resize-settle-ms'))
+  }
+
+  set resizeSettleMs(value: number | undefined) {
+    this.#writeAttribute('resize-settle-ms', value)
+  }
+
+  get resizeSafetyMs(): number | undefined {
+    return parseNumber(this.getAttribute('resize-safety-ms'))
+  }
+
+  set resizeSafetyMs(value: number | undefined) {
+    this.#writeAttribute('resize-safety-ms', value)
+  }
+
+  get resizeWidthEpsilon(): number | undefined {
+    return parseNumber(this.getAttribute('resize-width-epsilon'))
+  }
+
+  set resizeWidthEpsilon(value: number | undefined) {
+    this.#writeAttribute('resize-width-epsilon', value)
+  }
+
+  get morphSettleMarginMs(): number | undefined {
+    return parseNumber(this.getAttribute('morph-settle-margin-ms'))
+  }
+
+  set morphSettleMarginMs(value: number | undefined) {
+    this.#writeAttribute('morph-settle-margin-ms', value)
+  }
+
+  get expandedWidth(): string | undefined {
+    return this.getAttribute('expanded-width') ?? undefined
+  }
+
+  set expandedWidth(value: string | undefined) {
+    this.#writeAttribute('expanded-width', value)
+  }
+
+  get expandedHeight(): string | undefined {
+    return this.getAttribute('expanded-height') ?? undefined
+  }
+
+  set expandedHeight(value: string | undefined) {
+    this.#writeAttribute('expanded-height', value)
+  }
+
+  get lockScroll(): boolean {
+    return this.#lockScroll ?? true
+  }
+
+  set lockScroll(value: boolean) {
+    this.#lockScroll = value
+    this.#instance?.update({ lockScroll: value })
+  }
+
+  get manageFocus(): boolean {
+    return this.#manageFocus ?? true
+  }
+
+  set manageFocus(value: boolean) {
+    this.#manageFocus = value
+    this.#instance?.update({ manageFocus: value })
+  }
+
+  get collapseOnEscape(): boolean {
+    return this.#collapseOnEscape ?? true
+  }
+
+  set collapseOnEscape(value: boolean) {
+    this.#collapseOnEscape = value
+    this.#instance?.update({ collapseOnEscape: value })
   }
 
   get collapseIcon(): Node | string | undefined {
@@ -186,6 +288,11 @@ export class HugFrameElement extends ElementBase {
     instance.destroy()
   }
 
+  #writeAttribute(name: string, value: number | string | undefined): void {
+    if (value === undefined) this.removeAttribute(name)
+    else this.setAttribute(name, String(value))
+  }
+
   #readOptions(): HugFrameOptions {
     return {
       container: this,
@@ -197,6 +304,15 @@ export class HugFrameElement extends ElementBase {
       minHeight: parseNumber(this.getAttribute('min-height')),
       maxHeight: parseNumber(this.getAttribute('max-height')),
       initialHeight: parseNumber(this.getAttribute('initial-height')),
+      resizeSettleMs: parseNumber(this.getAttribute('resize-settle-ms')),
+      resizeSafetyMs: parseNumber(this.getAttribute('resize-safety-ms')),
+      resizeWidthEpsilon: parseNumber(this.getAttribute('resize-width-epsilon')),
+      morphSettleMarginMs: parseNumber(this.getAttribute('morph-settle-margin-ms')),
+      expandedWidth: this.getAttribute('expanded-width') ?? undefined,
+      expandedHeight: this.getAttribute('expanded-height') ?? undefined,
+      lockScroll: this.#lockScroll,
+      manageFocus: this.#manageFocus,
+      collapseOnEscape: this.#collapseOnEscape,
       collapseIcon: this.#collapseIcon,
       renderCollapse: this.#renderCollapse,
       iframeProps: this.#iframeProps,
