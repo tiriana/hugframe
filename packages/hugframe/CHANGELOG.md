@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/tiriana/hugframe/compare/hugframe-v3.0.0...hugframe-v3.1.0) (2026-10-22)
+
+
+### Features
+
+* **hugframe:** hug a silent same-origin frame by measuring it ([#26](https://github.com/tiriana/hugframe/issues/26)) ([f5b5340](https://github.com/tiriana/hugframe/commit/f5b534036b546ca27de5652d4d18dbb4044a2649))
+
 ## [3.0.0](https://github.com/tiriana/hugframe/compare/hugframe-v2.0.2...hugframe-v3.0.0) (2026-10-22)
 
 
