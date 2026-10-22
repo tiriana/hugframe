@@ -9,6 +9,11 @@ import { createHugFrame } from '../dist/index.js'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const readDist = (name) => readFile(join(root, 'dist', name), 'utf8')
 
+// The three shipped sheets. The combined entry only re-exports the two parts, so
+// an assertion about the contract as a whole reads all three.
+const SHEETS = ['hugframe.css', 'hugframe-core.css', 'hugframe-theme.css']
+const readAllSheets = async () => (await Promise.all(SHEETS.map(readDist))).join('\n')
+
 // The documented selector contract. Every value is asserted against this list,
 // both in the DOM the engine builds and in the selectors the stylesheet uses.
 const PART_VALUES = ['root', 'backdrop', 'box', 'frame', 'collapse', 'collapse-icon']
@@ -24,7 +29,7 @@ function readTokens(css) {
 // A token nothing reads is a knob that does nothing, and would become a prop that
 // does nothing in a wrapper.
 test('every declared token is read somewhere in the stylesheet', async () => {
-  const css = await readDist('hugframe.css')
+  const css = await readAllSheets()
 
   assert.deepEqual(
     [...declaredTokens(css)].filter((name) => !readTokens(css).has(name)),
@@ -37,7 +42,7 @@ test('every declared token is read somewhere in the stylesheet', async () => {
 // and the stylesheet has to agree with all three. The height has no declaration of
 // its own: its agreement is the box fallback matching the value the engine writes.
 test('the engine-coupled tokens are declared and read, with the height fallback in agreement', async () => {
-  const css = await readDist('hugframe.css')
+  const css = await readAllSheets()
   const declared = declaredTokens(css)
   const read = readTokens(css)
 
@@ -107,7 +112,7 @@ test('the structural classes survive alongside the parts', () => {
 // A part the stylesheet keys off that the code does not document is a selector with
 // nothing behind it, so the two lists have to match.
 test('every part selector in the stylesheet is a documented part', async () => {
-  const css = await readDist('hugframe.css')
+  const css = await readAllSheets()
   const used = new Set(
     [...css.matchAll(/\[data-hug-part=(['"])([^'"]+)\1\]/g)].map((match) => match[2]),
   )
@@ -118,6 +123,58 @@ test('every part selector in the stylesheet is a documented part', async () => {
     'the stylesheet references a part that is not part of the documented contract',
   )
   assert.ok(used.has('collapse') && used.has('collapse-icon'))
+})
+
+// The combined entry has to stay a pure re-export: the moment a rule lives there
+// instead of in a part sheet, `hugframe/css/core` and `hugframe/css/theme` stop
+// carrying the whole contract between them and a narrower import silently loses a
+// declaration.
+test('the combined sheet is imports only, core then theme', async () => {
+  const css = await readDist('hugframe.css')
+  const lines = css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const imports = lines.map((line) => {
+    assert.ok(!/layer\(/.test(line), `a wrapped import would nest the layer: ${line}`)
+    const match = /^@import\s+['"]\.\/hugframe-(core|theme)\.css['"];$/.exec(line)
+    assert.ok(match, `the combined sheet may only import its parts: ${line}`)
+    return match[1]
+  })
+
+  assert.deepEqual(imports, ['core', 'theme'])
+})
+
+// The four colour tokens are the whole of the replaceable appearance. If the core
+// sheet either declares or reads one, `hugframe/css/core` is no longer paint-free.
+test('the core sheet neither declares nor reads a colour token', async () => {
+  const css = await readDist('hugframe-core.css')
+  const declared = declaredTokens(css)
+  const read = readTokens(css)
+
+  for (const token of ['line', 'surface', 'text', 'accent']) {
+    assert.ok(!declared.has(token), `hugframe-core.css should not declare --hug-${token}`)
+    assert.ok(!read.has(token), `hugframe-core.css should not read --hug-${token}`)
+  }
+})
+
+test('the theme sheet declares every colour token', async () => {
+  const css = await readDist('hugframe-theme.css')
+  const declared = declaredTokens(css)
+
+  for (const token of ['line', 'surface', 'text', 'accent']) {
+    assert.ok(declared.has(token), `hugframe-theme.css should declare --hug-${token}`)
+  }
+})
+
+// The engine writes --hug-initial-height before the framed document first reports,
+// and the box's fallback has to equal it. The fallback is part of the mechanism, so
+// it belongs to the core sheet, not the theme sheet.
+test('the box height fallback lives in the core sheet', async () => {
+  const css = await readDist('hugframe-core.css')
+  assert.match(css, /height:\s*var\(--hug-initial-height,\s*[^)]+\)/)
 })
 
 /* ------------------------------------------------------------------ *

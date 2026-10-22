@@ -37,6 +37,12 @@ frame.expand()
 frame.sendMessage({ action: 'add-row' })
 ```
 
+`hugframe/css` is the default: it loads the geometry and animation (`hugframe/css/core`) and the
+default appearance (`hugframe/css/theme`) together. Import `hugframe/css/core` instead when you want
+to own the look — it is the mechanism with no paint of its own, styled through the documented
+`data-hug-part` hooks. Import `hugframe/css/theme` on its own only if you already load the core
+mechanism separately.
+
 The engine owns its mode: drive it with `expand()`, `collapse()` and `sendMessage()`, and observe
 `onModeChange` and `onPhaseChange`. There is no render cycle to keep in sync.
 

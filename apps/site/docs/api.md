@@ -230,29 +230,44 @@ would be a security regression.
 
 The appearance API is three things: the four colour custom properties, the three
 engine-coupled custom properties, and the stable `data-hug-part` hooks on every
-element the engine generates. Every other visual value is a plain literal in the
-rule that already used it, and the whole stylesheet is wrapped in
-`@layer hugframe`. The framed box is one of those literals: it ships square —
-`border-radius: 0` on `[data-hug-part='box']` — so a rounded frame is the host's
-to set, as the demo does with `14px`.
+element the engine generates. The stylesheet ships as two sheets behind three import
+paths: `hugframe-core.css` holds the geometry and the animation the frame needs to
+work, `hugframe-theme.css` holds the default chrome, and `hugframe/css` imports both.
+Every other visual value is a plain literal in the rule that already used it, in the
+theme sheet, and both sheets are wrapped in `@layer hugframe`. The framed box is one
+of those literals: it ships square — `border-radius: 0` on `[data-hug-part='box']` —
+so a rounded frame is the host's to set, as the demo does with `14px`.
+
+### Stylesheet entry points
+
+1. `hugframe/css` — the default. Imports the two sheets below, core first, and contains nothing but those two imports, so it keeps working exactly as before.
+2. `hugframe/css/core` — only the mechanism and the animation: the content-hugging geometry, the transitions keyed off `data-phase`, the iframe reset and the placement of the collapse slot. It has no paint of its own — no colours, surface, scrim or focus ring — so import it when you want to own the look and style the frame against the documented parts.
+3. `hugframe/css/theme` — only the default appearance: the four colour tokens and their light/dark pair, the box's surface and hairline, the backdrop scrim, the collapse control and the focus outlines. Import it on its own when you already load the core mechanism, or to extend the palette without rewriting the chrome.
+
+Replacing the look means importing `hugframe/css/core` and writing the visuals — the
+`40px` pill, the `18px` glyph, the box's `border-radius: 0`, the focus offsets —
+against the parts below. Those literals live in the theme sheet precisely so it is
+the only sheet you drop.
 
 ### Custom properties
 
 Set them on the root element — directly, or through `className`/`style`.
 
-| Token                  | Default                          | Kept because                                                                                                                                                                                                                                                                          |
-| ---------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--hug-z-index`        | `1000000000`                     | The engine reads it in `getZIndex()`, and the exported `HUGFRAME_Z_INDEX` must match it. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the export. |
-| `--hug-initial-height` | `240px`                          | The engine writes it on every height update, before the framed document first reports.                                                                                                                                                                                                |
-| `--hug-duration`       | `460ms`                          | The engine reads it to size the morph's `transitionend` fallback, and the morph transitions read it too, so one value drives both.                                                                                                                                                    |
-| `--hug-surface`        | light `#ffffff` / dark `#171a20` | The frame's own background, so a box that is momentarily larger than the frame never shows the page through it.                                                                                                                                                                       |
-| `--hug-text`           | light `#14171f` / dark `#ececea` | The frame's text colour, and the collapse glyph through `currentColor`.                                                                                                                                                                                                               |
-| `--hug-line`           | light `#dfe3ea` / dark `#2b2f38` | Hairline borders and dividers.                                                                                                                                                                                                                                                        |
-| `--hug-accent`         | light `#4b46e0` / dark `#9b94ff` | The focus ring.                                                                                                                                                                                                                                                                       |
+| Token                  | Default                          | Sheet  | Kept because                                                                                                                                                                                                                                                                          |
+| ---------------------- | -------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--hug-z-index`        | `1000000000`                     | core   | The engine reads it in `getZIndex()`, and the exported `HUGFRAME_Z_INDEX` must match it. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the export. |
+| `--hug-initial-height` | `240px`                          | _none_ | The engine writes it on every height update, before the framed document first reports; the box's fallback in the core sheet must equal the value it writes.                                                                                                                           |
+| `--hug-duration`       | `460ms`                          | core   | The engine reads it to size the morph's `transitionend` fallback, and the morph transitions read it too, so one value drives both.                                                                                                                                                    |
+| `--hug-surface`        | light `#ffffff` / dark `#171a20` | theme  | The frame's own background, so a box that is momentarily larger than the frame never shows the page through it.                                                                                                                                                                       |
+| `--hug-text`           | light `#14171f` / dark `#ececea` | theme  | The frame's text colour, and the collapse glyph through `currentColor`.                                                                                                                                                                                                               |
+| `--hug-line`           | light `#dfe3ea` / dark `#2b2f38` | theme  | Hairline borders and dividers.                                                                                                                                                                                                                                                        |
+| `--hug-accent`         | light `#4b46e0` / dark `#9b94ff` | theme  | The focus ring.                                                                                                                                                                                                                                                                       |
 
 The four colour tokens carry a library-owned light/dark pair and are the documented
-colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
-set all four rather than one; the other three are coupled to the engine. These seven are the
+colour path; the theme sheet declares them, and a host that owns its own theme — MUI,
+a manual light/dark toggle — should set all four rather than one. The other three are
+coupled to the engine: `--hug-z-index` and `--hug-duration` are declared by the core
+sheet, and `--hug-initial-height` is written by the engine itself. These seven are the
 entire token surface.
 
 ### Parts
@@ -281,10 +296,14 @@ document receives `data-hug-sizing` on its own root.
 
 ### `@layer` and overriding
 
-The whole stylesheet ships inside `@layer hugframe { … }`. An unlayered consumer rule
-therefore beats it whatever its specificity, so a consumer can override the expanded
-state with a plain rule and no `!important`: a `.hug-box { … }` in your own stylesheet
-wins over the library's `.hug-root[data-mode='expanded'] .hug-box`.
+The whole stylesheet ships inside `@layer hugframe { … }`, declared by each part
+sheet. The combined `hugframe/css` imports them with a plain `@import`, not
+`@import … layer(hugframe)`: wrapping again would nest the layer as
+`hugframe.hugframe` and change its priority against an unlayered consumer rule. An
+unlayered consumer rule therefore beats it whatever its specificity, so a consumer
+can override the expanded state with a plain rule and no `!important`: a
+`.hug-box { … }` in your own stylesheet wins over the library's
+`.hug-root[data-mode='expanded'] .hug-box`.
 
 ### Example: restyling the collapse control
 
