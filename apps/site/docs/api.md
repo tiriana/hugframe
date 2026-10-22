@@ -34,7 +34,7 @@ function createHugFrame(options: HugFrameOptions): HugFrameInstance
 | `container`           | `HTMLElement`                                                      | —                | Required. The engine renders its own tree into this element.                                                                                                                                                                    |
 | `src`                 | `string`                                                           | —                | Required. The framed document.                                                                                                                                                                                                  |
 | `title`               | `string`                                                           | —                | Required. Labels the iframe, and names the dialog when expanded.                                                                                                                                                                |
-| `targetOrigin`        | `string`                                                           | current origin   | Origin expected from the framed document. `'*'` skips the check.                                                                                                                                                                |
+| `targetOrigin`        | `string`                                                           | current origin   | Origin expected from the framed document. `'*'` skips the origin check; the message still has to come from the frame's own window.                                                                                              |
 | `initialMode`         | `'inline' \| 'expanded'`                                           | `'inline'`       | The engine owns its mode; a host changes it with `expand()` / `collapse()`.                                                                                                                                                     |
 | `height`              | `'content' \| number \| string`                                    | `'content'`      | `'content'` hugs the framed document; a number is px; any other string is used verbatim, so `'60vh'` and `'clamp(280px, 45vh, 460px)'` both work. Inline only — expanded always fills.                                          |
 | `minHeight`           | `number`                                                           | `0`              | Inline-mode floor, px.                                                                                                                                                                                                          |
@@ -162,15 +162,20 @@ function getHugFrameChild(): HugFrameChild | undefined
 
 ### Options
 
-| Option           | Type                               | Default                    | Notes                                                           |
-| ---------------- | ---------------------------------- | -------------------------- | --------------------------------------------------------------- |
-| `targetOrigin`   | `string`                           | `'*'` (no check)           | Origin expected from the host.                                  |
-| `sizeSelector`   | `string`                           | `document.documentElement` | Element whose box height drives the frame.                      |
-| `offsetHeight`   | `number`                           | `0`                        | Constant px added to every reported height.                     |
-| `reportEpsilon`  | `number`                           | `0.5`                      | Px deadband below which a measured size change is not reported. |
-| `onMessage`      | `(payload: unknown) => void`       | —                          | Arbitrary payload sent from the host.                           |
-| `onModeChange`   | `(mode: HugFrameMode) => void`     | —                          | The host entered `inline` or `expanded`.                        |
-| `onSizingChange` | `(sizing: HugFrameSizing) => void` | —                          | The host started driving the height, or went back to content.   |
+| Option           | Type                               | Default                    | Notes                                                                          |
+| ---------------- | ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------ |
+| `targetOrigin`   | `string`                           | `'*'`                      | Origin expected from the host. The parent window is required whatever this is. |
+| `sizeSelector`   | `string`                           | `document.documentElement` | Element whose box height drives the frame.                                     |
+| `offsetHeight`   | `number`                           | `0`                        | Constant px added to every reported height.                                    |
+| `reportEpsilon`  | `number`                           | `0.5`                      | Px deadband below which a measured size change is not reported.                |
+| `onMessage`      | `(payload: unknown) => void`       | —                          | Arbitrary payload sent from the host.                                          |
+| `onModeChange`   | `(mode: HugFrameMode) => void`     | —                          | The host entered `inline` or `expanded`.                                       |
+| `onSizingChange` | `(sizing: HugFrameSizing) => void` | —                          | The host started driving the height, or went back to content.                  |
+
+`targetOrigin` defaults differently on the two sides: the host defaults to its own origin, because it knows
+where it serves its framed document from, while the framed document defaults to `'*'`, because it cannot
+know which host embedded it. The wildcard relaxes the origin check only — the framed document always
+requires `event.source` to be its parent window.
 
 ### Instance
 
@@ -178,7 +183,8 @@ function getHugFrameChild(): HugFrameChild | undefined
 `requestExpand()`, `requestCollapse()`, `requestClose()`, `sendMessage(payload)`, `destroy()`.
 
 The runtime is a safe no-op when the document is opened outside a frame, so a framed app can also be
-previewed directly.
+previewed directly. It warns once through `console.warn` when two consecutive size reports equal the
+frame's own height, the signature of a document laid out at `height: 100vh`.
 
 ### Attributes the runtime writes
 
@@ -215,8 +221,10 @@ validated by an exported guard.
 `isHugFrameParentMessage(value)` and `postHugFrameMessage(target, message, targetOrigin)`.
 
 Two checks matter and both are enforced. The host verifies that `event.source` is the frame's own
-`contentWindow` as well as the origin, and the framed document verifies the origin and its parent window.
-Trusting the `source` field inside the payload alone would be a security regression.
+`contentWindow` as well as the origin, and the framed document verifies that `event.source` is its parent
+window as well as the origin. The parent check holds even when `targetOrigin` is `'*'`, so the wildcard
+widens which origins are accepted, not which windows. Trusting the `source` field inside the payload alone
+would be a security regression.
 
 ## Appearance: parts, state attributes and the layered stylesheet
 
@@ -241,8 +249,9 @@ Set them on the root element — directly, or through `className`/`style`.
 | `--hug-accent`         | light `#4b46e0` / dark `#9b94ff` | The focus ring.                                                                                                                                                                                                                                                                       |
 
 The four colour tokens carry a library-owned light/dark pair and are the documented
-colour path; the other three are coupled to the engine. These seven are the entire
-token surface.
+colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
+set all four rather than one; the other three are coupled to the engine. These seven are the
+entire token surface.
 
 ### Parts
 
@@ -293,7 +302,7 @@ unlayered CSS:
 
 ## Layout rules for credible framing
 
-1. Never use `vh`/`dvh`/`vw` on the axis the host controls while content-sized. A `min-height: 100vh` in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop.
+1. Never use `vh`/`dvh`/`vw` on the axis the host controls while content-sized. A `min-height: 100vh` in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document's runtime warns once when two consecutive size reports equal the frame's own height, which is that loop's signature.
 2. Do not give the framed document's `html` or `body` a `height: 100%`.
 3. Use container queries, not media queries, inside the framed document: its width has nothing to do with the viewport.
 
