@@ -667,7 +667,7 @@ code {
       <nav class="toc" aria-label="On this page">
         <details class="toc__panel" open>
           <summary class="toc__summary">On this page</summary>
-          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#stylesheet-entry-points">Stylesheet entry points</a></li><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
+          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#stylesheet-entry-points">Stylesheet entry points</a></li><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#what-can-and-cannot-be-hugged">What can and cannot be hugged</a></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
         </details>
       </nav>
       <article class="page"><h1 id="hugframe-api-reference">hugframe API reference</h1>
@@ -1347,6 +1347,32 @@ unlayered CSS:</p>
   color: #fff;
 }
 </code></pre>
+<h2 id="what-can-and-cannot-be-hugged">What can and cannot be hugged</h2>
+<p>Hugging needs the framed document&#39;s height, and the engine has exactly one source for it: the <code>size</code>
+message. Every case below follows from that, in three tiers.</p>
+<ol>
+<li>Content you control hugs. Same-origin pages, <code>srcdoc</code>, and anything you serve yourself: import
+<code>createHugFrameChild</code> from <code>hugframe/child</code> inside the framed document, as <a href="#createhugframechild-options">above</a>.
+A cross-origin page you control hugs the same way, by including that runtime; it is the library&#39;s headline
+capability.</li>
+<li>A third-party page you cannot modify cannot be hugged. The parent has no layout information about a
+cross-origin document: the same-origin policy makes <code>iframe.contentDocument</code> throw, no API exposes the
+inner document&#39;s size, the framed page must run something to answer <code>postMessage</code>, and CORS blocks
+fetching another origin&#39;s HTML. Give the frame a deliberate height instead — <code>height: 480</code>, or any CSS
+string, used verbatim, so <code>&#39;clamp(280px, 45vh, 460px)&#39;</code> works — or proxy the page onto your own origin and
+treat it as the first tier, at the cost of relative URLs, CSP, cookies and the other site&#39;s terms of service.</li>
+<li>A document sized to its own viewport has no intrinsic height to converge on. A document using <code>100vh</code>, or a
+<code>height: 100%</code> chain, measures the frame it sits in and reports that height back, so the frame never hugs
+anything. It is the loop the runtime warns about once, under the <a href="#layout-rules-for-credible-framing">layout rules</a>
+below. Let the host dictate the height instead, through the child&#39;s <code>data-hug-sizing</code> attribute and its
+<code>suspend()</code> and <code>resume()</code> methods, rather than a content report.</li>
+</ol>
+<p>Without a report the frame uses <code>initialHeight</code>, 240px by default, clamped by <code>maxHeight</code>. Growing the frame
+until the inner scrollbar disappears is not an alternative: reading that scrollbar needs the same blocked access
+that measuring the document needs, so it only works where direct measurement already works, and it is the
+scrollbar feedback loop itself — a scrollbar takes width, the content reflows taller, the frame grows, the
+scrollbar goes away, the content shrinks — which browsers mitigate with <code>scrollbar-gutter: stable</code>. Where the
+frame is measurable, one <code>scrollHeight</code> read is both correct and cheaper.</p>
 <h2 id="layout-rules-for-credible-framing">Layout rules for credible framing</h2>
 <ol>
 <li>Never use <code>vh</code>/<code>dvh</code>/<code>vw</code> on the axis the host controls while content-sized. A <code>min-height: 100vh</code> in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document&#39;s runtime warns once when two consecutive size reports equal the frame&#39;s own height, which is that loop&#39;s signature.</li>
