@@ -52,7 +52,44 @@ Importing the package also registers the element, so HTML works too:
 
 Inside the framed document, import `createHugFrameChild` from `hugframe/child`. It reports the frame's
 size, answers the host's `mode` and `sizing` messages, and is a safe no-op when the document is opened
-outside a frame.
+outside a frame. Its `targetOrigin` defaults to `'*'` where the host's defaults to the host's own origin,
+because a framed document cannot know which host embedded it; the wildcard relaxes only the origin check,
+never the requirement that the message come from the parent window.
+
+## Sizing the framed document
+
+The frame hugs the framed document only while that document is laid out at its content size. A document
+sized to its own frame — `height: 100vh`, or `height: 100%` on `html`/`body` — reports the frame's height
+back to the host, the host grows the frame, and the document grows with it, so the frame never hugs
+anything. The runtime warns once through `console.warn` when two consecutive reports equal the frame's
+height. When the framed document really does have to fill the frame, hand the height to the host instead:
+the runtime marks the document with `data-hug-sizing="fixed"`, and `suspend()`/`resume()` stop and restart
+content chasing.
+
+## Theming
+
+The frame's colours are four custom properties — `--hug-line`, `--hug-surface`, `--hug-text` and
+`--hug-accent` — and those four are the theming entry point. They ship a light and a dark value picked by
+`prefers-color-scheme`, so a host that owns its own theme (MUI, a manual light/dark toggle, anything that
+does not follow the system) should set all four on the frame's root through `className` or `style`, or the
+frame will disagree with the app around it. The radius, the inset ring and the backdrop are literals in
+the stylesheet: override them with your own unlayered rule, which wins without `!important`.
+
+## Defaults
+
+| Option                                            | Default          |
+| ------------------------------------------------- | ---------------- |
+| `height`                                          | `'content'`      |
+| `minHeight`                                       | `0` px           |
+| `maxHeight`                                       | `720` px         |
+| `initialHeight`                                   | `240` px         |
+| `initialMode`                                     | `'inline'`       |
+| `resizeSettleMs` / `resizeSafetyMs`               | `120` / `400` ms |
+| `morphSettleMarginMs`                             | `90` ms          |
+| `lockScroll` / `manageFocus` / `collapseOnEscape` | `true`           |
+
+`initialHeight` and `maxHeight` are demo-scale, so an app-sized or scrollable embed overrides both. Every
+option, its default and its meaning is in the [API reference](https://tiriana.github.io/hugframe/api/).
 
 ## Documentation
 
