@@ -44,6 +44,8 @@
       "default": "./dist/child.js"
     },
     "./css": "./dist/hugframe.css",
+    "./css/core": "./dist/hugframe-core.css",
+    "./css/theme": "./dist/hugframe-theme.css",
     "./package.json": "./package.json"
   },
   "scripts": {

@@ -1,0 +1,120 @@
+/* Everything lives in a named layer, so any unlayered consumer rule beats the
+   library regardless of specificity. That is what lets a plain `.hug-box { … }`
+   override the expanded state without `!important`. */
+@layer hugframe {
+  .hug-root {
+    /* Two of the seven public tokens are engine-coupled: --hug-z-index is read by
+       getZIndex() and must match HUGFRAME_Z_INDEX in core.ts, --hug-duration sizes
+       the morph's transitionend fallback. The engine also writes
+       --hug-initial-height. The four colour tokens, and the appearance built on
+       them, live in hugframe-theme.css. */
+    /* Must match HUGFRAME_Z_INDEX in core.ts, and stay short: CSS minifiers round long numeric literals. */
+    --hug-z-index: 1000000000;
+    --hug-duration: 460ms;
+
+    position: relative;
+    width: 100%;
+    z-index: 0;
+  }
+
+  .hug-root[data-mode='expanded'],
+  .hug-root[data-phase='expanding'],
+  .hug-root[data-phase='collapsing'] {
+    z-index: var(--hug-z-index);
+  }
+
+  .hug-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--hug-z-index) - 1);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 300ms;
+  }
+
+  .hug-root[data-mode='expanded'] .hug-backdrop {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s;
+  }
+
+  .hug-box {
+    position: relative;
+    z-index: var(--hug-z-index);
+    width: 100%;
+    height: var(--hug-initial-height, 240px);
+    overflow: hidden;
+    transition:
+      height 260ms cubic-bezier(0.33, 1, 0.68, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hug-root[data-sizing='fixed'] .hug-box {
+    transition:
+      height var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hug-root[data-phase='resizing'] .hug-box {
+    transition:
+      height 260ms cubic-bezier(0.33, 1, 0.68, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hug-root[data-phase='expanding'] .hug-box,
+  .hug-root[data-phase='collapsing'] .hug-box {
+    transition:
+      top var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      left var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      width var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      height var(--hug-duration) cubic-bezier(0.22, 1, 0.36, 1),
+      border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hug-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
+
+  /* The library owns where the control sits; the node inside it is either the
+     built-in button or whatever `renderCollapse` returned. */
+  [data-hug-part='collapse'] {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 0;
+    pointer-events: none;
+  }
+
+  [data-hug-part='collapse'] > * {
+    pointer-events: auto;
+  }
+
+  /* The collapse control's transition is declared in the theme sheet, which loads
+     after this one, so a class-based rule here would lose at equal specificity and
+     reduced motion would silently stop working. The part selectors cannot lose,
+     and they also cover a node returned by `renderCollapse`. */
+  @media (prefers-reduced-motion: reduce) {
+    .hug-root [data-hug-part='box'],
+    .hug-root [data-hug-part='backdrop'],
+    .hug-root [data-hug-part='collapse'] > * {
+      transition: none;
+    }
+  }
+}

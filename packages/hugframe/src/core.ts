@@ -21,7 +21,7 @@ import {
 import { buildCollapseAffordance, createHugFrameTemplate } from './template'
 import type { HugFrameInstance, HugFrameOptions, HugFramePhase } from './types'
 
-/** Default stacking level for the morph. Must match `--hug-z-index` in hugframe.css. */
+/** Default stacking level for the morph. Must match `--hug-z-index` in hugframe-core.css. */
 // Few significant digits on purpose: CSS minifiers, Lightning CSS included, round
 // longer numeric literals, which would leave the shipped stylesheet disagreeing
 // with this constant. test/dist.test.js guards the pair.

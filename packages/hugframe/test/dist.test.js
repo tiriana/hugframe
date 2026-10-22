@@ -22,13 +22,13 @@ const declaredZIndex = (css) => {
 test('the stylesheet and the exported constant agree, minified or not', async () => {
   const [{ HUGFRAME_Z_INDEX }, stylesheet] = await Promise.all([
     import('../dist/index.js'),
-    read('dist/hugframe.css'),
+    read('dist/hugframe-core.css'),
   ])
 
   assert.equal(declaredZIndex(stylesheet), HUGFRAME_Z_INDEX)
 
   const minified = transform({
-    filename: 'hugframe.css',
+    filename: 'hugframe-core.css',
     code: Buffer.from(stylesheet),
     minify: true,
   }).code.toString()
