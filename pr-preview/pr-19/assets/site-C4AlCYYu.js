@@ -8,6 +8,7 @@ import{i as e,n as t,t as n}from"./theme-Bv_q4zvD.js";function r(e,t,n){let r=ge
     <nav class="masthead__nav" aria-label="Site sections">
       <a href="{{home}}" {{demo-current}}>Demo</a>
       <a href="{{home}}playground/">Playground</a>
+      <a href="{{react}}" {{react-current}}>React</a>
       <a href="{{api}}" {{api-current}}>API reference</a>
     </nav>
     <div class="masthead__util">
@@ -53,6 +54,7 @@ import{i as e,n as t,t as n}from"./theme-Bv_q4zvD.js";function r(e,t,n){let r=ge
     <nav class="footer__nav" aria-label="Project links">
       <a href="{{home}}">Demo</a>
       <a href="{{home}}playground/">Playground</a>
+      <a href="{{react}}" {{react-current}}>React</a>
       <a href="{{api}}">API reference</a>
       <a href="https://github.com/tiriana/hugframe" target="_blank" rel="noopener noreferrer">
         GitHub
