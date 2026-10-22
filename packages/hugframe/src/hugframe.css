@@ -32,7 +32,9 @@
     }
   }
 
-  .hug-root[data-mode='expanded'] {
+  .hug-root[data-mode='expanded'],
+  .hug-root[data-phase='expanding'],
+  .hug-root[data-phase='collapsing'] {
     z-index: var(--hug-z-index);
   }
 
