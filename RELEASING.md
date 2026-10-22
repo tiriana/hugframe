@@ -9,6 +9,23 @@ Releases are automated. Merging to `main` is the only trigger.
 3. Merging that PR tags each released package, creates its GitHub Release, and the workflow dispatches the publish workflow once per tag.
 4. The publish workflow resolves the tag to a package, builds it, and publishes it to the registry over OIDC. The dispatch is explicit because a release created with the default `GITHUB_TOKEN` does not trigger the `release: published` workflow run; `workflow_dispatch` is the exemption that makes this work.
 
+## The Release PR is authored by a GitHub App
+
+GitHub holds the `pull_request` runs of a pull request created by a workflow using `GITHUB_TOKEN` in
+`action_required` until a maintainer approves them, and no repository setting exempts a bot. release-please
+therefore pushes as a GitHub App, so the Release PR's checks run by themselves, and the workflow then puts
+that PR into auto-merge, squashed exactly as release PRs have been merged so far.
+
+The App path engages once all of this exists:
+
+1. A GitHub App installed on this repository with **Contents: write**, **Pull requests: write** and
+   **Issues: write**.
+2. The repository variable `RELEASE_APP_ID` and the repository secret `RELEASE_APP_PRIVATE_KEY`.
+3. **Allow auto-merge** enabled in the repository settings (`allow_auto_merge`).
+
+Until then the workflow falls back to `GITHUB_TOKEN` (`steps.app-token.outputs.token || secrets.GITHUB_TOKEN`),
+so releases keep working, with the approval prompt that has always been there.
+
 ## Commit messages decide the version
 
 | Commit                                         | Release |

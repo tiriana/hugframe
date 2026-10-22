@@ -41,11 +41,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A pull request opened with GITHUB_TOKEN has its pull_request runs held for approval.
+      - name: Mint a GitHub App token
+        id: app-token
+        if: vars.RELEASE_APP_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Release
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Falls back to GITHUB_TOKEN until the App is configured.
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
@@ -69,3 +79,17 @@ jobs:
       - name: Verify the released versions reached the registry
         if: steps.release.outputs.releases_created == 'true'
         run: node scripts/verify-published.mjs --wait 300
+
+      # Putting the release PR into auto-merge lets a merged release land without a click.
+      - name: Enable auto-merge on the release PR
+        if: steps.release.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.release.outputs.pr }}
+        run: |
+          number=$(echo "$PR" | jq -r '.number')
+          if [ "$(gh pr view "$number" --json autoMergeRequest --jq '.autoMergeRequest')" != 'null' ]; then
+            echo "auto-merge already enabled on #${number}"
+            exit 0
+          fi
+          gh pr merge "$number" --squash --auto
