@@ -8,6 +8,7 @@ const UMBRELLA = 'pr-preview'
 const BRANCH = 'gh-pages'
 const API = 'https://api.github.com'
 const AUTHOR = 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
+const ATTEMPTS = 3
 
 export const stalePreviews = (directories, states) => {
   const remove = []
@@ -25,6 +26,11 @@ export const stalePreviews = (directories, states) => {
   }
 
   return { remove, ignored }
+}
+
+export const pushLostRace = (error) => {
+  const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join('\n')
+  return output.includes('[rejected]') || output.includes('fetch first')
 }
 
 const git = (args, options = {}) => execFileSync('git', args, { encoding: 'utf8', ...options })
@@ -81,86 +87,106 @@ const main = async () => {
   }
   const [owner, name] = repo.split('/')
   const dryRun = process.argv.includes('--dry-run')
+  const remote = `https://x-access-token:${token}@github.com/${owner}/${name}.git`
 
-  const checkout = await mkdtemp(join(tmpdir(), 'prune-previews-'))
+  // gh-pages takes a push from every preview deploy, so losing the push race is
+  // expected; each attempt re-clones and decides again from the branch as it is now.
+  const attempt = async () => {
+    const checkout = await mkdtemp(join(tmpdir(), 'prune-previews-'))
 
-  try {
-    git([
-      'clone',
-      '--depth',
-      '1',
-      '--branch',
-      BRANCH,
-      `https://x-access-token:${token}@github.com/${owner}/${name}.git`,
-      checkout,
-    ])
+    try {
+      git(['clone', '--depth', '1', '--branch', BRANCH, remote, checkout])
 
-    const directories = await listDirectories(checkout)
-    const numbers = [
-      ...new Set(
-        directories
-          .map((directory) => /^pr-(\d+)$/.exec(directory)?.[1])
-          .filter((n) => n !== undefined),
-      ),
-    ]
+      const directories = await listDirectories(checkout)
+      const numbers = [
+        ...new Set(
+          directories
+            .map((directory) => /^pr-(\d+)$/.exec(directory)?.[1])
+            .filter((n) => n !== undefined),
+        ),
+      ]
 
-    const states = new Map()
-    for (const number of numbers) {
-      states.set(Number(number), await pullRequestState(repo, token, number))
-    }
-
-    const { remove, ignored } = stalePreviews(directories, states)
-
-    for (const directory of ignored) {
-      console.log(
-        `prune-previews: ${UMBRELLA}/${directory} is not named pr-<number>, leaving it alone`,
-      )
-    }
-
-    if (remove.length === 0) {
-      console.log(
-        `prune-previews: every preview under ${UMBRELLA}/ belongs to an open pull request`,
-      )
-      return
-    }
-
-    const prNumbers = remove
-      .map((directory) => Number(/^pr-(\d+)$/.exec(directory)[1]))
-      .sort((a, b) => a - b)
-    const summary = prNumbers.map((number) => `#${number}`).join(', ')
-
-    if (dryRun) {
-      for (const directory of remove) {
-        console.log(`prune-previews: would remove ${UMBRELLA}/${directory}`)
+      const states = new Map()
+      for (const number of numbers) {
+        states.set(Number(number), await pullRequestState(repo, token, number))
       }
-      console.log(`prune-previews: dry run, keeping ${summary} in place`)
+
+      const { remove, ignored } = stalePreviews(directories, states)
+
+      for (const directory of ignored) {
+        console.log(
+          `prune-previews: ${UMBRELLA}/${directory} is not named pr-<number>, leaving it alone`,
+        )
+      }
+
+      if (remove.length === 0) {
+        console.log(
+          `prune-previews: every preview under ${UMBRELLA}/ belongs to an open pull request`,
+        )
+        return false
+      }
+
+      const prNumbers = remove
+        .map((directory) => Number(/^pr-(\d+)$/.exec(directory)[1]))
+        .sort((a, b) => a - b)
+      const summary = prNumbers.map((number) => `#${number}`).join(', ')
+
+      if (dryRun) {
+        for (const directory of remove) {
+          console.log(`prune-previews: would remove ${UMBRELLA}/${directory}`)
+        }
+        console.log(`prune-previews: dry run, keeping ${summary} in place`)
+        return false
+      }
+
+      for (const directory of remove) {
+        git(['rm', '-r', '--quiet', '--ignore-unmatch', join(UMBRELLA, directory)], {
+          cwd: checkout,
+        })
+      }
+
+      git(
+        [
+          '-c',
+          'user.name=github-actions[bot]',
+          '-c',
+          'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+          'commit',
+          '--author',
+          AUTHOR,
+          '-m',
+          `chore: prune stale previews for ${summary}`,
+        ],
+        { cwd: checkout },
+      )
+
+      git(['push', 'origin', BRANCH], { cwd: checkout })
+
+      console.log(`prune-previews: removed ${summary}`)
+      return true
+    } finally {
+      await rm(checkout, { recursive: true, force: true })
+    }
+  }
+
+  for (let attemptNumber = 1; attemptNumber <= ATTEMPTS; attemptNumber++) {
+    try {
+      const pushed = await attempt()
+
+      if (pushed && attemptNumber > 1) {
+        console.log(`prune-previews: push lost a race, succeeded on attempt ${attemptNumber}`)
+      }
       return
+    } catch (error) {
+      if (!pushLostRace(error)) throw error
+
+      if (attemptNumber === ATTEMPTS) {
+        throw new Error(
+          `prune-previews: ${BRANCH} kept moving; the push lost the race on all ${ATTEMPTS} attempts, the next run will try again`,
+          { cause: error },
+        )
+      }
     }
-
-    for (const directory of remove) {
-      git(['rm', '-r', '--quiet', '--ignore-unmatch', join(UMBRELLA, directory)], { cwd: checkout })
-    }
-
-    git(
-      [
-        '-c',
-        'user.name=github-actions[bot]',
-        '-c',
-        'user.email=41898282+github-actions[bot]@users.noreply.github.com',
-        'commit',
-        '--author',
-        AUTHOR,
-        '-m',
-        `chore: prune stale previews for ${summary}`,
-      ],
-      { cwd: checkout },
-    )
-
-    git(['push', 'origin', BRANCH], { cwd: checkout })
-
-    console.log(`prune-previews: removed ${summary}`)
-  } finally {
-    await rm(checkout, { recursive: true, force: true })
   }
 }
 
