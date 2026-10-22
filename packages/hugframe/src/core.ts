@@ -52,6 +52,8 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
   let resizeSettleTimer: number | null = null
   let resizeSafetyTimer: number | null = null
   let observer: ResizeObserver | null = null
+  let measureObserver: ResizeObserver | null = null
+  let contentReported = false
   let motionQuery: MediaQueryList | null = null
   let prefersReducedMotion = false
   let escapeBound = false
@@ -145,6 +147,48 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     inlineHeight = next
     template.box.style.height = `${next}px`
     template.iframe.style.height = `${next}px`
+  }
+
+  // Mirrors the child's own measurement of `document.documentElement`, so a
+  // document measured by the parent and the same document measured by
+  // hugframe/child produce the same number.
+  function measuredContentHeight(doc: Document): number {
+    const rect = doc.documentElement.getBoundingClientRect()
+    return Math.max(0, Math.ceil(rect.height))
+  }
+
+  function applyMeasuredHeight(): void {
+    if (destroyed || contentReported) return
+    const doc = template.iframe.contentDocument
+    if (!doc) return
+    contentHeight = measuredContentHeight(doc)
+    applyInlineHeight()
+  }
+
+  function startContentMeasurement(): void {
+    if (resolveFixedHeight(opts.height) !== null) return
+    const doc = template.iframe.contentDocument
+    if (!doc) return
+    applyMeasuredHeight()
+    if (typeof ResizeObserver === 'undefined') return
+    if (!measureObserver) measureObserver = new ResizeObserver(applyMeasuredHeight)
+    measureObserver.observe(doc.documentElement)
+  }
+
+  function stopContentMeasurement(): void {
+    measureObserver?.disconnect()
+    measureObserver = null
+  }
+
+  // The child posts `ready` during initialisation, before the document's `load`, so a
+  // cooperative document is flagged by the time the frame loads and is never measured.
+  // The switch resets here because a load ends a navigation: the next document starts
+  // with no report of its own.
+  function handleFrameLoad(): void {
+    if (destroyed) return
+    const unaccompanied = !contentReported
+    contentReported = false
+    if (unaccompanied) startContentMeasurement()
   }
 
   function pinBox(rect: DOMRect): void {
@@ -377,9 +421,13 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     const message = event.data
     switch (message.type) {
       case 'ready':
+        contentReported = true
+        stopContentMeasurement()
         handleReady()
         return
       case 'size':
+        contentReported = true
+        stopContentMeasurement()
         contentHeight = message.height
         applyInlineHeight()
         return
@@ -412,7 +460,11 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     const previous = opts
     opts = { ...previous, ...next }
 
-    if (has('src') && opts.src !== undefined) template.iframe.src = opts.src
+    if (has('src') && opts.src !== undefined) {
+      template.iframe.src = opts.src
+      contentReported = false
+      stopContentMeasurement()
+    }
     if (has('title')) template.setTitle(opts.title ?? '')
     if (has('className')) template.setClassName(opts.className)
     if (has('style')) template.setStyle(opts.style)
@@ -430,6 +482,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
       notifySizing(nextSizing)
       emitSizingChange(nextSizing)
     }
+    if (nextSizing === 'fixed') stopContentMeasurement()
 
     if (has('collapseIcon') || has('renderCollapse')) syncCollapse()
     if (has('initialMode') && opts.initialMode !== undefined) requestMode(opts.initialMode)
@@ -458,6 +511,8 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     setLock(false)
     observer?.disconnect()
     observer = null
+    stopContentMeasurement()
+    template.iframe.removeEventListener('load', handleFrameLoad)
     window.removeEventListener('message', handleMessage)
     bindEscape(false)
     motionQuery?.removeEventListener('change', onMotionChange)
@@ -497,6 +552,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     }
 
     window.addEventListener('message', handleMessage)
+    template.iframe.addEventListener('load', handleFrameLoad)
     bindEscape(mode === 'expanded' && opts.collapseOnEscape !== false)
 
     if (mode === 'expanded') {
