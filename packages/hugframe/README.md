@@ -2,6 +2,9 @@
 
 An iframe that hugs its content, then morphs into a chromeless full-window view.
 
+It hugs the content you can put the child runtime into, not every URL: see
+[What can and cannot be hugged](#what-can-and-cannot-be-hugged).
+
 No dependencies and no framework: plain TypeScript over DOM APIs, shipping its own types, with a
 `<hug-frame>` element when you would rather write HTML than call a function.
 
@@ -61,6 +64,39 @@ size, answers the host's `mode` and `sizing` messages, and is a safe no-op when 
 outside a frame. Its `targetOrigin` defaults to `'*'` where the host's defaults to the host's own origin,
 because a framed document cannot know which host embedded it; the wildcard relaxes only the origin check,
 never the requirement that the message come from the parent window.
+
+## What can and cannot be hugged
+
+Hugging needs to know the framed document's height, and the engine has exactly one source for it: the
+framed document reporting its own size over `postMessage`. Nothing else reads the document, so what can be
+hugged falls into three tiers.
+
+1. **Content you control hugs.** Same-origin pages, `srcdoc`, and anything you serve yourself: import
+   `createHugFrameChild` from `hugframe/child` in the framed document, as above. A cross-origin page you
+   control — your other app, your docs on another domain — hugs the same way, by including the child
+   runtime. That is the library's headline capability, and it is unchanged.
+2. **A third-party page you cannot modify cannot be hugged**, by this or any other library. The parent has
+   no layout information about a cross-origin document: the same-origin policy makes
+   `iframe.contentDocument` throw, no API exposes the inner document's size, and the framed page must run
+   something to answer `postMessage`. Fetching the foreign page yourself fails too, because CORS blocks
+   reading another origin's HTML. Give the frame a deliberate height instead — `height: 480`, or any CSS
+   string, which is passed through verbatim, so `'clamp(280px, 45vh, 460px)'` works — or proxy the page
+   onto your own origin and treat it as the first tier, remembering that a proxy drags in relative URLs,
+   CSP, cookies and the other site's terms of service.
+3. **A document that sizes itself to its viewport has no intrinsic height.** A framed document using
+   `100vh`, or a `height: 100%` chain, derives its height from the frame while the frame derives its height
+   from the document: there is no fixed point. The runtime already warns once when two consecutive size
+   reports equal the frame's own height, which is that loop's signature. Let the host dictate the height
+   instead, with `data-hug-sizing` and `suspend()`/`resume()`, described under
+   [Sizing the framed document](#sizing-the-framed-document).
+
+With no report at all the frame falls back to `initialHeight` — 240px by default, clamped by `maxHeight`.
+Growing the frame until the inner scrollbar disappears is not a way out: watching that scrollbar needs the
+same blocked access that measuring the document needs, so it works only where direct measurement already
+works — and it is the scrollbar feedback loop itself, where a scrollbar takes width, the content reflows
+taller, the frame grows, the scrollbar goes away and the content shrinks, which browsers mitigate with
+`scrollbar-gutter: stable`. Where the frame is measurable, one `scrollHeight` read is both correct and
+cheaper.
 
 ## Sizing the framed document
 

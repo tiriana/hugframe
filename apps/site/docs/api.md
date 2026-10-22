@@ -321,6 +321,34 @@ unlayered CSS:
 }
 ```
 
+## What can and cannot be hugged
+
+Hugging needs the framed document's height, and the engine has exactly one source for it: the `size`
+message. Every case below follows from that, in three tiers.
+
+1. Content you control hugs. Same-origin pages, `srcdoc`, and anything you serve yourself: import
+   `createHugFrameChild` from `hugframe/child` inside the framed document, as [above](#createhugframechild-options).
+   A cross-origin page you control hugs the same way, by including that runtime; it is the library's headline
+   capability.
+2. A third-party page you cannot modify cannot be hugged. The parent has no layout information about a
+   cross-origin document: the same-origin policy makes `iframe.contentDocument` throw, no API exposes the
+   inner document's size, the framed page must run something to answer `postMessage`, and CORS blocks
+   fetching another origin's HTML. Give the frame a deliberate height instead — `height: 480`, or any CSS
+   string, used verbatim, so `'clamp(280px, 45vh, 460px)'` works — or proxy the page onto your own origin and
+   treat it as the first tier, at the cost of relative URLs, CSP, cookies and the other site's terms of service.
+3. A document sized to its own viewport has no intrinsic height to converge on. A document using `100vh`, or a
+   `height: 100%` chain, measures the frame it sits in and reports that height back, so the frame never hugs
+   anything. It is the loop the runtime warns about once, under the [layout rules](#layout-rules-for-credible-framing)
+   below. Let the host dictate the height instead, through the child's `data-hug-sizing` attribute and its
+   `suspend()` and `resume()` methods, rather than a content report.
+
+Without a report the frame uses `initialHeight`, 240px by default, clamped by `maxHeight`. Growing the frame
+until the inner scrollbar disappears is not an alternative: reading that scrollbar needs the same blocked access
+that measuring the document needs, so it only works where direct measurement already works, and it is the
+scrollbar feedback loop itself — a scrollbar takes width, the content reflows taller, the frame grows, the
+scrollbar goes away, the content shrinks — which browsers mitigate with `scrollbar-gutter: stable`. Where the
+frame is measurable, one `scrollHeight` read is both correct and cheaper.
+
 ## Layout rules for credible framing
 
 1. Never use `vh`/`dvh`/`vw` on the axis the host controls while content-sized. A `min-height: 100vh` in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document's runtime warns once when two consecutive size reports equal the frame's own height, which is that loop's signature.
