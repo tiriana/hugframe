@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Install, usage and API for @hugframe/react, the React wrapper around hugframe." />
+    <title>@hugframe/react</title>
+    <link rel="icon" href="../favicon.svg" />
+    <style>
+      :root {
+  color-scheme: light dark;
+
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #efece6;
+  --text: #1a1a17;
+  --muted: #67665f;
+  --line: #e1ddd4;
+  --accent: #4b46e0;
+  --accent-ink: #ffffff;
+  --ok: #0f7b6c;
+  --warn: #a15c00;
+  --danger: #c0392b;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --frame-radius: 14px;
+
+  --font-body:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --shadow-sm: 0 1px 2px rgb(20 20 18 / 6%);
+  --shadow-md: 0 1px 2px rgb(20 20 18 / 6%), 0 16px 36px -20px rgb(20 20 18 / 28%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111214;
+    --surface: #191b1f;
+    --surface-2: #22252b;
+    --text: #ececea;
+    --muted: #9b9c98;
+    --line: #2c2f36;
+    --accent: #9b94ff;
+    --accent-ink: #12131a;
+    --ok: #4ecdb6;
+    --warn: #e0a34a;
+    --danger: #ef8175;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 45%), 0 20px 44px -24px rgb(0 0 0 / 70%);
+  }
+}
+
+:where(.hug-root:not([data-mode='expanded'])) .hug-box {
+  border-radius: var(--frame-radius);
+}
+/* The library frame is square; round the inline box without outranking a recipe. */
+
+/* The shared shell: the background and texture, the type, the header, the footer and the
+   navigation behaviour. The demo loads this file through its entry module and the API page
+   has it inlined by scripts/build-docs.mjs. It reads the palette and font tokens declared
+   in src/demo/theme.css; it declares no colours or type of its own. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --measure: 940px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(rgb(120 116 100 / 10%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14px 24px 13px;
+}
+
+.masthead__brand {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.masthead__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.masthead__nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__nav a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.masthead__nav a[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__util {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.masthead__util a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__github {
+  width: 44px;
+}
+
+.masthead__npm {
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.masthead__util a:hover {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.masthead__nav a:focus-visible,
+.masthead__util a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.footer {
+  border-top: 1px solid var(--line);
+}
+
+.footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 22px 24px 44px;
+}
+
+.footer__note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.footer__nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer__nav a:hover {
+  color: var(--text);
+}
+
+.footer__nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 560px) {
+  .masthead__inner {
+    padding: 12px 18px 11px;
+  }
+
+  .masthead__util {
+    order: 2;
+  }
+
+  .masthead__nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .footer__inner {
+    padding: 18px 18px 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masthead__nav a,
+  .masthead__util a {
+    transition: none;
+  }
+}
+
+/* Reading styles for the API page only. The shell — background, texture, type, header,
+   footer and navigation — comes from src/site/site.css, and the palette and font tokens
+   from src/demo/theme.css; both are inlined by scripts/build-docs.mjs. Nothing here
+   re-declares a colour, a font or a shell dimension. */
+
+/* The reading column is centred by the outer grid; the contents nav lives in the page's
+   own margin, so it never takes width from the column. Below the breakpoint the grid
+   collapses and the nav becomes a <details> block above the article. */
+.docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
+  column-gap: 24px;
+  align-items: start;
+  padding: 40px 24px 104px;
+}
+
+.page {
+  grid-column: 2;
+  min-width: 0;
+  max-width: var(--measure);
+  margin: 0 auto;
+  line-height: 1.62;
+}
+
+.toc {
+  grid-column: 1;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  justify-self: end;
+  width: min(196px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.toc__summary {
+  display: none;
+}
+
+.toc__list,
+.toc__sub {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc__list a {
+  display: block;
+  padding: 4px 9px;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  text-decoration: none;
+  overflow-wrap: break-word;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.toc__list a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* The current section carries a bar, a weight change and a tint, so it is not colour alone. */
+.toc__list a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.toc__list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.toc__sub {
+  padding-left: 12px;
+}
+
+.toc__list a code {
+  font-size: 0.82em;
+}
+
+.toc__sub a {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-size: 11.5px;
+}
+
+.page h1 {
+  margin: 0 0 0.55em;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(28px, 4.4vw, 38px);
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+}
+
+.page h2 {
+  margin: 2.6em 0 0.9em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.page h3 {
+  margin: 2em 0 0.65em;
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.page p {
+  margin: 0 0 1.05em;
+}
+
+.page ul,
+.page ol {
+  margin: 0 0 1.2em;
+  padding-left: 1.5em;
+}
+
+.page li {
+  margin-top: 0.35em;
+}
+
+.page li::marker {
+  color: var(--muted);
+}
+
+.page strong {
+  font-weight: 600;
+}
+
+.page p,
+.page li,
+.page th,
+.page td {
+  overflow-wrap: break-word;
+}
+
+.page a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.page a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.page a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.page :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Section headings carry the API name in backticks; a chip there would read as a block,
+   so headings keep the symbol in mono and drop the surface. */
+.page :is(h1, h2, h3) code {
+  padding: 0;
+  background: none;
+  font-size: 0.82em;
+  letter-spacing: -0.01em;
+}
+
+.page pre {
+  margin: 1.4em 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.page pre code {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.page table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.page th,
+.page td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.page th {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.page tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.page pre:focus-visible,
+.page table:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.page :is(h2, h3)[id] {
+  scroll-margin-top: 24px;
+}
+
+@media (max-width: 1399px) {
+  .docs {
+    display: block;
+  }
+
+  .toc {
+    position: static;
+    grid-column: auto;
+    justify-self: normal;
+    width: auto;
+    max-height: none;
+    margin-bottom: 28px;
+    overflow: visible;
+  }
+
+  .toc__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc__summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 160ms ease;
+  }
+
+  .toc__panel[open] .toc__summary::after {
+    transform: rotate(-135deg) translateY(-1px);
+  }
+
+  .toc__summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toc__panel[open] .toc__list {
+    margin-top: 8px;
+  }
+
+  .toc__list a {
+    padding: 7px 12px;
+  }
+}
+
+@media (max-width: 620px) {
+  .docs {
+    padding: 32px 18px 80px;
+  }
+
+  .page h1 {
+    margin-bottom: 0.5em;
+  }
+
+  .page h2 {
+    margin-top: 2.2em;
+  }
+
+  .page pre {
+    padding: 14px 15px;
+  }
+
+  .page th,
+  .page td {
+    padding: 9px 12px;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <!-- The one copy of the site header and footer. The demo mounts it through a Vite ?raw
+     import, and scripts/build-docs.mjs inlines it into the API page. The ../, ../api/
+     and {{*-current}} tokens are the only parts that differ between the two pages; nothing
+     else here is templated. The footer is split off at the marker comment below. -->
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="masthead__brand" href="../">hugframe</a>
+    <nav class="masthead__nav" aria-label="Site sections">
+      <a href="../" >Demo</a>
+      <a href="../playground/">Playground</a>
+      <a href="./"  aria-current="page">React</a>
+      <a href="../api/" >API reference</a>
+    </nav>
+    <div class="masthead__util">
+      <a
+        class="masthead__github"
+        href="https://github.com/tiriana/hugframe"
+        aria-label="hugframe on GitHub"
+        title="hugframe on GitHub"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg
+          viewBox="0 0 16 16"
+          width="18"
+          height="18"
+          fill="currentColor"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"
+          />
+        </svg>
+      </a>
+      <a
+        class="masthead__npm"
+        href="https://www.npmjs.com/package/hugframe"
+        aria-label="hugframe on npm"
+        title="hugframe on npm"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        npm
+      </a>
+    </div>
+  </div>
+</header>
+    <main class="docs">
+      <nav class="toc" aria-label="On this page">
+        <details class="toc__panel" open>
+          <summary class="toc__summary">On this page</summary>
+          <ol class="toc__list"><li><a href="#install">Install</a></li><li><a href="#use">Use</a></li><li><a href="#reading-the-frames-state">Reading the frame&#39;s state</a></li><li><a href="#notes">Notes</a></li><li><a href="#license">License</a></li></ol>
+        </details>
+      </nav>
+      <article class="page"><h1 id="hugframe-react">@hugframe/react</h1>
+<p>React bindings for <a href="https://github.com/tiriana/hugframe/tree/main/packages/hugframe">hugframe</a> — an iframe
+that hugs its content, then morphs into a chromeless full-window view.</p>
+<p>React 18 and 19 both work, on the client and during a server render. The package ships ESM, CommonJS and
+its own types.</p>
+<h2 id="install">Install</h2>
+<pre><code class="language-sh">npm install @hugframe/react hugframe
+</code></pre>
+<p><code>react</code> is a peer dependency, so it stays yours.</p>
+<h2 id="use">Use</h2>
+<pre><code class="language-tsx">import { useRef } from &#39;react&#39;
+import { HugFrame, type HugFrameHandle } from &#39;@hugframe/react&#39;
+import &#39;hugframe/css&#39;
+
+export function Embed() {
+  const frame = useRef&lt;HugFrameHandle&gt;(null)
+
+  return (
+    &lt;&gt;
+      &lt;HugFrame ref={frame} src=&quot;/embedded.html&quot; title=&quot;Embedded app&quot; /&gt;
+      &lt;button onClick={() =&gt; frame.current?.expand()}&gt;Expand&lt;/button&gt;
+    &lt;/&gt;
+  )
+}
+</code></pre>
+<p><code>HugFrame</code> takes every option <code>createHugFrame</code> takes except <code>container</code>, under the same name and with the
+same meaning. The ref is the frame instance, so <code>expand()</code>, <code>collapse()</code>, <code>toggle()</code>, <code>sendMessage()</code>,
+<code>getMode()</code> and <code>update()</code> behave exactly as the <a href="../api/">API reference</a>
+describes.</p>
+<p><code>className</code> and <code>style</code> are the engine&#39;s options, so they style the frame itself. The component renders a
+plain <code>&lt;div&gt;</code> to mount the frame into; wrap it if you want to place it in a layout.</p>
+<h2 id="reading-the-frames-state">Reading the frame&#39;s state</h2>
+<p>Anything rendered as a child of <code>HugFrame</code> sits in the frame&#39;s context and can subscribe to it:</p>
+<pre><code class="language-tsx">import { HugFrame, useHugFrameMode } from &#39;@hugframe/react&#39;
+
+function Status() {
+  const mode = useHugFrameMode()
+  return &lt;span&gt;{mode === &#39;expanded&#39; ? &#39;Full window&#39; : &#39;Inline&#39;}&lt;/span&gt;
+}
+
+export function Embed() {
+  return (
+    &lt;HugFrame src=&quot;/embedded.html&quot; title=&quot;Embedded app&quot;&gt;
+      &lt;Status /&gt;
+    &lt;/HugFrame&gt;
+  )
+}
+</code></pre>
+<ol>
+<li><code>useHugFrame()</code> — the frame instance, or null during the first render.</li>
+<li><code>useHugFrameMode()</code> — <code>&#39;inline&#39;</code> or <code>&#39;expanded&#39;</code>.</li>
+<li><code>useHugFramePhase()</code> — <code>&#39;idle&#39;</code>, <code>&#39;expanding&#39;</code>, <code>&#39;collapsing&#39;</code> or <code>&#39;resizing&#39;</code>.</li>
+<li><code>useHugFrameSizing()</code> — <code>&#39;content&#39;</code> or <code>&#39;fixed&#39;</code>.</li>
+</ol>
+<p>Children render beside the frame rather than inside it. <code>useSyncExternalStore</code> does the subscribing, so a
+reader re-renders only when the value it asked for changes.</p>
+<h2 id="notes">Notes</h2>
+<ol>
+<li>Changing <code>src</code> reloads the framed document, exactly as it does in the engine. Every other option is applied in place.</li>
+<li>Callbacks may be written inline: the latest one is always the one that runs, and a new one never re-creates the frame.</li>
+<li>On the server the component renders its container and nothing else, and the frame is created in a layout effect, so hydration matches.</li>
+</ol>
+<h2 id="license">License</h2>
+<p>MIT.</p>
+</article>
+    </main>
+    <footer class="footer">
+  <div class="footer__inner">
+    <p class="footer__note">An iframe that fits its content, then opens into the whole window.</p>
+    <nav class="footer__nav" aria-label="Project links">
+      <a href="../">Demo</a>
+      <a href="../playground/">Playground</a>
+      <a href="./"  aria-current="page">React</a>
+      <a href="../api/">API reference</a>
+      <a href="https://github.com/tiriana/hugframe" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+      <a href="https://www.npmjs.com/package/hugframe" target="_blank" rel="noopener noreferrer">
+        npm
+      </a>
+    </nav>
+  </div>
+</footer>
+    <script>
+      // The contents list is a sidebar on wide viewports and a collapsed <details> below the
+      // breakpoint docs.css uses; the scroll spy marks the section the reading column is in.
+      {
+        const panel = document.querySelector('.toc__panel')
+        const wide = matchMedia('(min-width: 1400px)')
+        const syncPanel = () => (panel.open = wide.matches)
+        syncPanel()
+        wide.addEventListener('change', syncPanel)
+
+        const links = new Map(
+          [...document.querySelectorAll('.toc__list a')].map((a) => [a.hash.slice(1), a]),
+        )
+        let current
+        const mark = (id) => {
+          if (id === current) return
+          current = id
+          for (const [key, a] of links) {
+            if (key === id) a.setAttribute('aria-current', 'location')
+            else a.removeAttribute('aria-current')
+          }
+        }
+
+        const headings = [...document.querySelectorAll('.page h2[id], .page h3[id]')]
+        const sync = () => {
+          // At the document bottom the last heading sits below the reading line, so no heading
+          // qualifies: clamp to the last section, which is the one in view there.
+          if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+            mark(headings.at(-1).id)
+            return
+          }
+          const line = window.innerHeight * 0.25
+          let best
+          for (const h of headings) {
+            const top = h.getBoundingClientRect().top
+            if (top <= line && (!best || top > best.top)) best = { id: h.id, top }
+          }
+          if (best) mark(best.id)
+        }
+
+        // A click marks its target and holds it until the reader scrolls again. The pin has to
+        // outlive the jump's own `scrollend` and the observer callback that follows it, or the
+        // marker falls back to the target's first subsection; a user gesture releases it.
+        let pinned = false
+        let jumping = false
+        const observer = new IntersectionObserver(
+          () => {
+            if (!pinned) sync()
+          },
+          { rootMargin: '0px 0px -75% 0px' },
+        )
+        headings.forEach((h) => observer.observe(h))
+        for (const a of links.values()) {
+          a.addEventListener('click', () => {
+            pinned = true
+            jumping = true
+            mark(a.hash.slice(1))
+          })
+        }
+        for (const type of ['wheel', 'touchstart', 'keydown']) {
+          window.addEventListener(
+            type,
+            () => {
+              pinned = false
+              jumping = false
+            },
+            { passive: true },
+          )
+        }
+        window.addEventListener('scrollend', () => {
+          if (jumping) jumping = false
+          else {
+            pinned = false
+            sync()
+          }
+        })
+      }
+    </script>
+  </body>
+</html>
