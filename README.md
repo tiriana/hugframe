@@ -38,6 +38,12 @@ The end-to-end suite drives a real Chromium, so run `npx playwright install chro
 every browser suite against that local build, and exits non-zero if any of them fails. Set `GF_BASE` to
 point a suite at another deployment instead.
 
+Every pull request against `main` gets the built site as a preview at
+`https://tiriana.github.io/hugframe/pr-preview/pr-<number>/`, removed again when the pull request closes.
+That preview is one directory deeper than the deployment, so `npm run build:pages` reads `GF_BASE_PATH` to
+write a different prefix into the asset URLs; the preview workflow sets it to
+`/hugframe/pr-preview/pr-<number>/`. The default stays `/hugframe/`.
+
 Releases are automated from Conventional Commits. See [RELEASING.md](RELEASING.md) for what a merge to
 `main` does and how to add a package to the release.
 

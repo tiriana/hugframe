@@ -33,14 +33,14 @@ jobs:
       - name: Build the site
         run: npm run build:pages
 
+      # The preview workflow publishes per-PR previews into the same branch, so this
+      # deploy rebases onto what is already there and keeps its umbrella directory,
+      # rather than force-pushing a tree that does not contain either.
       - name: Publish to the gh-pages branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd apps/site/.pages
-          git init -q -b gh-pages
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -q -m "deploy: ${GITHUB_SHA}"
-          git push --force --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: apps/site/.pages
+          branch: gh-pages
+          clean: true
+          clean-exclude: pr-preview/
+          force: false
