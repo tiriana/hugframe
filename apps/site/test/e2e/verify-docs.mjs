@@ -54,6 +54,23 @@ check(
   JSON.stringify({ ...phone.toc, headings: phone.headings }),
 )
 
+// Hand-written prose links can rot to a dead `#…` target that nothing else checks.
+const proseLinks = phone.articleLinks.filter((href) => href?.startsWith('#') && href.length > 1)
+const anchorPage = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+await anchorPage.goto(URL, { waitUntil: 'load' })
+await anchorPage.waitForTimeout(300)
+const danglingAnchors = await anchorPage.evaluate(
+  (hrefs) => hrefs.filter((href) => !document.getElementById(href.slice(1))),
+  proseLinks,
+)
+await anchorPage.close()
+
+check(
+  'every in-page link in the prose resolves to a heading on the page',
+  danglingAnchors.length === 0,
+  JSON.stringify({ links: proseLinks.length, dangling: danglingAnchors }),
+)
+
 // The list is a sidebar when the viewport can hold one and a stacked disclosure when it cannot,
 // so the assertion is on where it sits relative to the reading column, not on the breakpoint.
 for (const [label, probeResult, beside] of [
