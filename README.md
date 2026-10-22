@@ -44,6 +44,10 @@ That preview is one directory deeper than the deployment, so `npm run build:page
 write a different prefix into the asset URLs; the preview workflow sets it to
 `/hugframe/pr-preview/pr-<number>/`. The default stays `/hugframe/`.
 
+That removal rides on a workflow run, and a merge can cancel it before it starts, so a preview can outlive
+its pull request. A scheduled sweep reconciles `pr-preview/` against the pull requests' state and removes
+any directory whose pull request is no longer open.
+
 Releases are automated from Conventional Commits. See [RELEASING.md](RELEASING.md) for what a merge to
 `main` does and how to add a package to the release.
 

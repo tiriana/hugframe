@@ -1,0 +1,31 @@
+name: Prune stale previews
+
+# The preview action removes a preview on `closed`, but a merge deletes
+# `refs/pull/<n>/merge` and cancels the queued run with it, so the directory can
+# survive. This sweep reconciles the umbrella directory against the pull requests.
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: '0'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # No `npm ci`: the sweep uses only Node builtins.
+      - name: Remove previews for pull requests that are no longer open
+        run: node scripts/prune-previews.mjs
