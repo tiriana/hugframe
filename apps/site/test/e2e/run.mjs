@@ -11,6 +11,7 @@ const SUITES = [
   'verify-sizing.mjs',
   'verify-header.mjs',
   'verify-docs.mjs',
+  'verify-react.mjs',
   'verify-options.mjs',
   'verify-playground.mjs',
 ]

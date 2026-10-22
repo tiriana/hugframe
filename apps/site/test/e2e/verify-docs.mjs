@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 
+import { clickLastTocEntry, probePage } from './lib/docs-page.mjs'
 import { createReport, docsUrl } from './lib/harness.mjs'
 
 const URL = docsUrl()
@@ -7,66 +8,9 @@ const { check, finish } = createReport('reference page layout')
 
 const browser = await chromium.launch()
 
-const probe = async (width, height) => {
-  const page = await browser.newPage({ viewport: { width, height } })
-  const errors = []
-  page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text().slice(0, 160))
-  })
-  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message.slice(0, 160)))
-  await page.goto(URL, { waitUntil: 'load' })
-  await page.waitForTimeout(300)
-
-  const measured = await page.evaluate(() => {
-    const doc = document.documentElement
-    const tables = [...document.querySelectorAll('table')]
-    const widest = tables
-      .map((table) => {
-        const style = getComputedStyle(table)
-        return {
-          scrollWidth: table.scrollWidth,
-          clientWidth: table.clientWidth,
-          overflowX: style.overflowX,
-          display: style.display,
-          columns: table.querySelectorAll('thead th').length,
-        }
-      })
-      .sort((a, b) => b.scrollWidth - a.scrollWidth)[0]
-
-    const nav = document.querySelector('nav.toc')
-    const article = document.querySelector('article.page')
-    const navRect = nav?.getBoundingClientRect()
-    const articleRect = article?.getBoundingClientRect()
-    const links = [...document.querySelectorAll('.toc__list a')]
-    const ids = [...document.querySelectorAll('[id]')].map((element) => element.id)
-
-    return {
-      docScrollWidth: doc.scrollWidth,
-      viewport: window.innerWidth,
-      tables: tables.length,
-      widest,
-      headings: document.querySelectorAll('h2').length,
-      codeBlocks: document.querySelectorAll('pre').length,
-      icon: document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? null,
-      bodyBackground: getComputedStyle(document.body).backgroundColor,
-      toc: {
-        sections: document.querySelectorAll('.toc__list > li').length,
-        links: links.length,
-        dangling: links.filter((a) => !document.querySelector(a.hash)).length,
-        duplicateIds: ids.length - new Set(ids).size,
-        beside: navRect && articleRect ? navRect.right <= articleRect.left + 1 : false,
-        stacked: navRect && articleRect ? navRect.bottom <= articleRect.top + 1 : false,
-      },
-    }
-  })
-
-  await page.close()
-  return { ...measured, errors }
-}
-
-const phone = await probe(375, 800)
-const desktop = await probe(1280, 900)
-const wide = await probe(1440, 900)
+const phone = await probePage(browser, URL, 375, 800)
+const desktop = await probePage(browser, URL, 1280, 900)
+const wide = await probePage(browser, URL, 1440, 900)
 
 check(
   'the reference page renders its content',
@@ -124,34 +68,12 @@ for (const [label, probeResult, beside] of [
   )
 }
 
-const tocPage = await browser.newPage({ viewport: { width: 1440, height: 900 } })
-await tocPage.goto(URL, { waitUntil: 'load' })
-await tocPage.waitForTimeout(300)
-// The page scrolls smoothly, so a long jump animates for seconds. What is under test is where the
-// entry lands and what it marks, not the animation, so the jump is made instant for the assertion.
-await tocPage.evaluate(() => {
-  document.documentElement.style.scrollBehavior = 'auto'
-})
-const entry = await tocPage.evaluate(() => {
-  const last = [...document.querySelectorAll('.toc__list a')].at(-1)
-  last.click()
-  return last.hash
-})
-await tocPage.waitForTimeout(300)
-const followed = await tocPage.evaluate((hash) => {
-  const heading = document.querySelector(hash)
-  const rect = heading?.getBoundingClientRect()
-  return {
-    marked: document.querySelector('.toc__list a[aria-current]')?.getAttribute('href') ?? null,
-    onScreen: rect ? rect.top >= -2 && rect.top < window.innerHeight : false,
-  }
-}, entry)
+const followed = await clickLastTocEntry(browser, URL)
 check(
   'clicking a contents entry scrolls to its heading and marks it',
-  followed.marked === entry && followed.onScreen,
-  JSON.stringify({ entry, ...followed }),
+  followed.marked === followed.entry && followed.onScreen,
+  JSON.stringify(followed),
 )
-await tocPage.close()
 
 await browser.close()
 finish()

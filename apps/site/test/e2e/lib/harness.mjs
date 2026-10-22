@@ -13,6 +13,10 @@ export const baseUrl = () => process.env.GF_BASE ?? 'http://127.0.0.1:5199/hugfr
 // it for the rare case of comparing against a remote deployment by hand.
 export const docsUrl = () => process.env.API_URL ?? `${baseUrl()}/api/`
 
+// The React page sits beside the reference under the same deployment prefix; REACT_URL
+// overrides it the same way API_URL does.
+export const reactUrl = () => process.env.REACT_URL ?? `${baseUrl()}/react/`
+
 // Screenshots are diagnostics, not assertions. They land in an ignored directory
 // so a failed run leaves something to look at without dirtying the worktree.
 export const shotsDir = () => {
