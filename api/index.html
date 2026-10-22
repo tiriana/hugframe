@@ -667,7 +667,7 @@ code {
       <nav class="toc" aria-label="On this page">
         <details class="toc__panel" open>
           <summary class="toc__summary">On this page</summary>
-          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
+          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#stylesheet-entry-points">Stylesheet entry points</a></li><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
         </details>
       </nav>
       <article class="page"><h1 id="hugframe-api-reference">hugframe API reference</h1>
@@ -1206,11 +1206,23 @@ would be a security regression.</p>
 <h2 id="appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</h2>
 <p>The appearance API is three things: the four colour custom properties, the three
 engine-coupled custom properties, and the stable <code>data-hug-part</code> hooks on every
-element the engine generates. Every other visual value is a plain literal in the
-rule that already used it, and the whole stylesheet is wrapped in
-<code>@layer hugframe</code>. The framed box is one of those literals: it ships square —
-<code>border-radius: 0</code> on <code>[data-hug-part=&#39;box&#39;]</code> — so a rounded frame is the host&#39;s
-to set, as the demo does with <code>14px</code>.</p>
+element the engine generates. The stylesheet ships as two sheets behind three import
+paths: <code>hugframe-core.css</code> holds the geometry and the animation the frame needs to
+work, <code>hugframe-theme.css</code> holds the default chrome, and <code>hugframe/css</code> imports both.
+Every other visual value is a plain literal in the rule that already used it, in the
+theme sheet, and both sheets are wrapped in <code>@layer hugframe</code>. The framed box is one
+of those literals: it ships square — <code>border-radius: 0</code> on <code>[data-hug-part=&#39;box&#39;]</code> —
+so a rounded frame is the host&#39;s to set, as the demo does with <code>14px</code>.</p>
+<h3 id="stylesheet-entry-points">Stylesheet entry points</h3>
+<ol>
+<li><code>hugframe/css</code> — the default. Imports the two sheets below, core first, and contains nothing but those two imports, so it keeps working exactly as before.</li>
+<li><code>hugframe/css/core</code> — only the mechanism and the animation: the content-hugging geometry, the transitions keyed off <code>data-phase</code>, the iframe reset and the placement of the collapse slot. It has no paint of its own — no colours, surface, scrim or focus ring — so import it when you want to own the look and style the frame against the documented parts.</li>
+<li><code>hugframe/css/theme</code> — only the default appearance: the four colour tokens and their light/dark pair, the box&#39;s surface and hairline, the backdrop scrim, the collapse control and the focus outlines. Import it on its own when you already load the core mechanism, or to extend the palette without rewriting the chrome.</li>
+</ol>
+<p>Replacing the look means importing <code>hugframe/css/core</code> and writing the visuals — the
+<code>40px</code> pill, the <code>18px</code> glyph, the box&#39;s <code>border-radius: 0</code>, the focus offsets —
+against the parts below. Those literals live in the theme sheet precisely so it is
+the only sheet you drop.</p>
 <h3 id="custom-properties">Custom properties</h3>
 <p>Set them on the root element — directly, or through <code>className</code>/<code>style</code>.</p>
 <table>
@@ -1218,48 +1230,58 @@ to set, as the demo does with <code>14px</code>.</p>
 <tr>
 <th>Token</th>
 <th>Default</th>
+<th>Sheet</th>
 <th>Kept because</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>--hug-z-index</code></td>
 <td><code>1000000000</code></td>
+<td>core</td>
 <td>The engine reads it in <code>getZIndex()</code>, and the exported <code>HUGFRAME_Z_INDEX</code> must match it. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the export.</td>
 </tr>
 <tr>
 <td><code>--hug-initial-height</code></td>
 <td><code>240px</code></td>
-<td>The engine writes it on every height update, before the framed document first reports.</td>
+<td><em>none</em></td>
+<td>The engine writes it on every height update, before the framed document first reports; the box&#39;s fallback in the core sheet must equal the value it writes.</td>
 </tr>
 <tr>
 <td><code>--hug-duration</code></td>
 <td><code>460ms</code></td>
+<td>core</td>
 <td>The engine reads it to size the morph&#39;s <code>transitionend</code> fallback, and the morph transitions read it too, so one value drives both.</td>
 </tr>
 <tr>
 <td><code>--hug-surface</code></td>
 <td>light <code>#ffffff</code> / dark <code>#171a20</code></td>
+<td>theme</td>
 <td>The frame&#39;s own background, so a box that is momentarily larger than the frame never shows the page through it.</td>
 </tr>
 <tr>
 <td><code>--hug-text</code></td>
 <td>light <code>#14171f</code> / dark <code>#ececea</code></td>
+<td>theme</td>
 <td>The frame&#39;s text colour, and the collapse glyph through <code>currentColor</code>.</td>
 </tr>
 <tr>
 <td><code>--hug-line</code></td>
 <td>light <code>#dfe3ea</code> / dark <code>#2b2f38</code></td>
+<td>theme</td>
 <td>Hairline borders and dividers.</td>
 </tr>
 <tr>
 <td><code>--hug-accent</code></td>
 <td>light <code>#4b46e0</code> / dark <code>#9b94ff</code></td>
+<td>theme</td>
 <td>The focus ring.</td>
 </tr>
 </tbody></table>
 <p>The four colour tokens carry a library-owned light/dark pair and are the documented
-colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
-set all four rather than one; the other three are coupled to the engine. These seven are the
+colour path; the theme sheet declares them, and a host that owns its own theme — MUI,
+a manual light/dark toggle — should set all four rather than one. The other three are
+coupled to the engine: <code>--hug-z-index</code> and <code>--hug-duration</code> are declared by the core
+sheet, and <code>--hug-initial-height</code> is written by the engine itself. These seven are the
 entire token surface.</p>
 <h3 id="parts">Parts</h3>
 <p>Every element the engine generates carries a <code>data-hug-part</code> attribute. It is the
@@ -1305,10 +1327,14 @@ The slot owns where the control sits; the node owns what it is.</p>
 <code>resizing</code>), <code>data-sizing</code> (<code>content</code> / <code>fixed</code>) and <code>data-ready</code>. The framed
 document receives <code>data-hug-sizing</code> on its own root.</p>
 <h3 id="layer-and-overriding"><code>@layer</code> and overriding</h3>
-<p>The whole stylesheet ships inside <code>@layer hugframe { … }</code>. An unlayered consumer rule
-therefore beats it whatever its specificity, so a consumer can override the expanded
-state with a plain rule and no <code>!important</code>: a <code>.hug-box { … }</code> in your own stylesheet
-wins over the library&#39;s <code>.hug-root[data-mode=&#39;expanded&#39;] .hug-box</code>.</p>
+<p>The whole stylesheet ships inside <code>@layer hugframe { … }</code>, declared by each part
+sheet. The combined <code>hugframe/css</code> imports them with a plain <code>@import</code>, not
+<code>@import … layer(hugframe)</code>: wrapping again would nest the layer as
+<code>hugframe.hugframe</code> and change its priority against an unlayered consumer rule. An
+unlayered consumer rule therefore beats it whatever its specificity, so a consumer
+can override the expanded state with a plain rule and no <code>!important</code>: a
+<code>.hug-box { … }</code> in your own stylesheet wins over the library&#39;s
+<code>.hug-root[data-mode=&#39;expanded&#39;] .hug-box</code>.</p>
 <h3 id="example-restyling-the-collapse-control">Example: restyling the collapse control</h3>
 <p>The slot keeps the control&#39;s position; restyle the node inside it with ordinary,
 unlayered CSS:</p>
