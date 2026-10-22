@@ -33,6 +33,13 @@ const probe = async (width, height) => {
       })
       .sort((a, b) => b.scrollWidth - a.scrollWidth)[0]
 
+    const nav = document.querySelector('nav.toc')
+    const article = document.querySelector('article.page')
+    const navRect = nav?.getBoundingClientRect()
+    const articleRect = article?.getBoundingClientRect()
+    const links = [...document.querySelectorAll('.toc__list a')]
+    const ids = [...document.querySelectorAll('[id]')].map((element) => element.id)
+
     return {
       docScrollWidth: doc.scrollWidth,
       viewport: window.innerWidth,
@@ -42,6 +49,14 @@ const probe = async (width, height) => {
       codeBlocks: document.querySelectorAll('pre').length,
       icon: document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? null,
       bodyBackground: getComputedStyle(document.body).backgroundColor,
+      toc: {
+        sections: document.querySelectorAll('.toc__list > li').length,
+        links: links.length,
+        dangling: links.filter((a) => !document.querySelector(a.hash)).length,
+        duplicateIds: ids.length - new Set(ids).size,
+        beside: navRect && articleRect ? navRect.right <= articleRect.left + 1 : false,
+        stacked: navRect && articleRect ? navRect.bottom <= articleRect.top + 1 : false,
+      },
     }
   })
 
@@ -51,6 +66,7 @@ const probe = async (width, height) => {
 
 const phone = await probe(375, 800)
 const desktop = await probe(1280, 900)
+const wide = await probe(1440, 900)
 
 check(
   'the reference page renders its content',
@@ -87,6 +103,55 @@ check(
   phone.errors.length === 0 && desktop.errors.length === 0,
   [...phone.errors, ...desktop.errors].slice(0, 2).join(' ; '),
 )
+
+check(
+  'the contents list is one entry per section, every one resolving to a heading',
+  phone.toc.sections === phone.headings && phone.toc.dangling === 0 && phone.toc.duplicateIds === 0,
+  JSON.stringify({ ...phone.toc, headings: phone.headings }),
+)
+
+// The list is a sidebar when the viewport can hold one and a stacked disclosure when it cannot,
+// so the assertion is on where it sits relative to the reading column, not on the breakpoint.
+for (const [label, probeResult, beside] of [
+  ['wide', wide, true],
+  ['desktop', desktop, false],
+  ['phone', phone, false],
+]) {
+  check(
+    `${label}: the contents sit ${beside ? 'beside' : 'above'} the reading column`,
+    beside ? probeResult.toc.beside : probeResult.toc.stacked,
+    JSON.stringify(probeResult.toc),
+  )
+}
+
+const tocPage = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+await tocPage.goto(URL, { waitUntil: 'load' })
+await tocPage.waitForTimeout(300)
+// The page scrolls smoothly, so a long jump animates for seconds. What is under test is where the
+// entry lands and what it marks, not the animation, so the jump is made instant for the assertion.
+await tocPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = 'auto'
+})
+const entry = await tocPage.evaluate(() => {
+  const last = [...document.querySelectorAll('.toc__list a')].at(-1)
+  last.click()
+  return last.hash
+})
+await tocPage.waitForTimeout(300)
+const followed = await tocPage.evaluate((hash) => {
+  const heading = document.querySelector(hash)
+  const rect = heading?.getBoundingClientRect()
+  return {
+    marked: document.querySelector('.toc__list a[aria-current]')?.getAttribute('href') ?? null,
+    onScreen: rect ? rect.top >= -2 && rect.top < window.innerHeight : false,
+  }
+}, entry)
+check(
+  'clicking a contents entry scrolls to its heading and marks it',
+  followed.marked === entry && followed.onScreen,
+  JSON.stringify({ entry, ...followed }),
+)
+await tocPage.close()
 
 await browser.close()
 finish()

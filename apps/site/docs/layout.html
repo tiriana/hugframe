@@ -16,7 +16,93 @@
   </head>
   <body>
     {{header}}
-    <main class="page">{{content}}</main>
+    <main class="docs">
+      <nav class="toc" aria-label="On this page">
+        <details class="toc__panel" open>
+          <summary class="toc__summary">On this page</summary>
+          {{toc}}
+        </details>
+      </nav>
+      <article class="page">{{content}}</article>
+    </main>
     {{footer}}
+    <script>
+      // The contents list is a sidebar on wide viewports and a collapsed <details> below the
+      // breakpoint docs.css uses; the scroll spy marks the section the reading column is in.
+      {
+        const panel = document.querySelector('.toc__panel')
+        const wide = matchMedia('(min-width: 1400px)')
+        const syncPanel = () => (panel.open = wide.matches)
+        syncPanel()
+        wide.addEventListener('change', syncPanel)
+
+        const links = new Map(
+          [...document.querySelectorAll('.toc__list a')].map((a) => [a.hash.slice(1), a]),
+        )
+        let current
+        const mark = (id) => {
+          if (id === current) return
+          current = id
+          for (const [key, a] of links) {
+            if (key === id) a.setAttribute('aria-current', 'location')
+            else a.removeAttribute('aria-current')
+          }
+        }
+
+        const headings = [...document.querySelectorAll('.page h2[id], .page h3[id]')]
+        const sync = () => {
+          // At the document bottom the last heading sits below the reading line, so no heading
+          // qualifies: clamp to the last section, which is the one in view there.
+          if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+            mark(headings.at(-1).id)
+            return
+          }
+          const line = window.innerHeight * 0.25
+          let best
+          for (const h of headings) {
+            const top = h.getBoundingClientRect().top
+            if (top <= line && (!best || top > best.top)) best = { id: h.id, top }
+          }
+          if (best) mark(best.id)
+        }
+
+        // A click marks its target and holds it until the reader scrolls again. The pin has to
+        // outlive the jump's own `scrollend` and the observer callback that follows it, or the
+        // marker falls back to the target's first subsection; a user gesture releases it.
+        let pinned = false
+        let jumping = false
+        const observer = new IntersectionObserver(
+          () => {
+            if (!pinned) sync()
+          },
+          { rootMargin: '0px 0px -75% 0px' },
+        )
+        headings.forEach((h) => observer.observe(h))
+        for (const a of links.values()) {
+          a.addEventListener('click', () => {
+            pinned = true
+            jumping = true
+            mark(a.hash.slice(1))
+          })
+        }
+        for (const type of ['wheel', 'touchstart', 'keydown']) {
+          window.addEventListener(
+            type,
+            () => {
+              pinned = false
+              jumping = false
+            },
+            { passive: true },
+          )
+        }
+        window.addEventListener('scrollend', () => {
+          if (jumping) jumping = false
+          else {
+            pinned = false
+            sync()
+          }
+        })
+      }
+    </script>
   </body>
 </html>

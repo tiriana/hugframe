@@ -3,11 +3,93 @@
    from src/demo/theme.css; both are inlined by scripts/build-docs.mjs. Nothing here
    re-declares a colour, a font or a shell dimension. */
 
+/* The reading column is centred by the outer grid; the contents nav lives in the page's
+   own margin, so it never takes width from the column. Below the breakpoint the grid
+   collapses and the nav becomes a <details> block above the article. */
+.docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
+  column-gap: 24px;
+  align-items: start;
+  padding: 40px 24px 104px;
+}
+
 .page {
+  grid-column: 2;
+  min-width: 0;
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 40px 24px 104px;
   line-height: 1.62;
+}
+
+.toc {
+  grid-column: 1;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  justify-self: end;
+  width: min(196px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.toc__summary {
+  display: none;
+}
+
+.toc__list,
+.toc__sub {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc__list a {
+  display: block;
+  padding: 4px 9px;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  text-decoration: none;
+  overflow-wrap: break-word;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.toc__list a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* The current section carries a bar, a weight change and a tint, so it is not colour alone. */
+.toc__list a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.toc__list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.toc__sub {
+  padding-left: 12px;
+}
+
+.toc__list a code {
+  font-size: 0.82em;
+}
+
+.toc__sub a {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-size: 11.5px;
 }
 
 .page h1 {
@@ -156,8 +238,78 @@
   outline-offset: 2px;
 }
 
+.page :is(h2, h3)[id] {
+  scroll-margin-top: 24px;
+}
+
+@media (max-width: 1399px) {
+  .docs {
+    display: block;
+  }
+
+  .toc {
+    position: static;
+    grid-column: auto;
+    justify-self: normal;
+    width: auto;
+    max-height: none;
+    margin-bottom: 28px;
+    overflow: visible;
+  }
+
+  .toc__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc__summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 160ms ease;
+  }
+
+  .toc__panel[open] .toc__summary::after {
+    transform: rotate(-135deg) translateY(-1px);
+  }
+
+  .toc__summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toc__panel[open] .toc__list {
+    margin-top: 8px;
+  }
+
+  .toc__list a {
+    padding: 7px 12px;
+  }
+}
+
 @media (max-width: 620px) {
-  .page {
+  .docs {
     padding: 32px 18px 80px;
   }
 
