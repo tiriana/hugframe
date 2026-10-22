@@ -3,18 +3,18 @@ import { createHugFrame } from 'hugframe'
 import chromeHtml from '@/site/chrome.html?raw'
 
 type HugFrameInstance = ReturnType<typeof createHugFrame>
-type ColumnCount = 1 | 2 | 3
+type FrameWidth = '1/3' | '2/3' | 'full'
 
 const BASE_URL = import.meta.env.BASE_URL
 const CHILD_SRC = `${BASE_URL}child.html`
 const SECOND_SRC = `${BASE_URL}child.html?view=second`
 const FIXED_HEIGHT = 'clamp(280px, 42vh, 460px)'
 
-const COLUMNS: readonly ColumnCount[] = [1, 2, 3]
-const COLUMN_WIDTHS: Record<ColumnCount, { frame: string; side: string; gap: string }> = {
-  1: { frame: '34%', side: 'calc(66% - 20px)', gap: '20px' },
-  2: { frame: '62%', side: 'calc(38% - 20px)', gap: '20px' },
-  3: { frame: '100%', side: '0px', gap: '0px' },
+const FRAME_WIDTHS: readonly FrameWidth[] = ['1/3', '2/3', 'full']
+const WIDTH_SPANS: Record<FrameWidth, { frame: string; side: string; gap: string }> = {
+  '1/3': { frame: '34%', side: 'calc(66% - 20px)', gap: '20px' },
+  '2/3': { frame: '62%', side: 'calc(38% - 20px)', gap: '20px' },
+  full: { frame: '100%', side: '0px', gap: '0px' },
 }
 
 const USAGE = `import { createHugFrame } from 'hugframe'
@@ -64,7 +64,7 @@ function siteChrome(): { header: Element; footer: Element } {
 }
 
 export function mountHost(container: HTMLElement): void {
-  let columns: ColumnCount = 2
+  let frameWidth: FrameWidth = '2/3'
   let fixedHeight = false
   let measured: number | null = null
   let phase = 'idle'
@@ -88,18 +88,23 @@ export function mountHost(container: HTMLElement): void {
     el('span', { class: 'controls__label', text: 'Drive the framed app' }),
   ])
 
+  const widthLabel = el('span', {
+    class: 'controls__label',
+    text: 'Frame width',
+    attrs: { id: 'frame-width-label' },
+  })
   const segmentedBox = el('div', {
     class: 'segmented',
-    attrs: { role: 'group', 'aria-label': 'Page columns' },
+    attrs: { role: 'group', 'aria-labelledby': 'frame-width-label' },
   })
-  const headControls = el('div', { class: 'head-controls' }, [segmentedBox])
+  const headControls = el('div', { class: 'head-controls' }, [widthLabel, segmentedBox])
 
   const workbenchHead = el('div', { class: 'workbench__head' }, [
     el('div', {}, [
       el('h2', { text: 'The frame' }),
       el('p', {
         class: 'workbench__note',
-        text: 'Switch the column count and the frame glides to its new width.',
+        text: 'Set the frame width and it glides to the new size.',
       }),
     ]),
     headControls,
@@ -207,15 +212,15 @@ export function mountHost(container: HTMLElement): void {
   phase = primary.getPhase()
   sizing = primary.getSizing()
 
-  const segmentedItems = COLUMNS.map((count) => ({
-    count,
+  const segmentedItems = FRAME_WIDTHS.map((width) => ({
+    width,
     element: el('button', {
       class: 'segmented__btn',
       attrs: { type: 'button' },
-      text: `${count} col`,
+      text: width,
       on: {
         click: () => {
-          columns = count
+          frameWidth = width
           render()
         },
       },
@@ -279,14 +284,14 @@ export function mountHost(container: HTMLElement): void {
   }
 
   function render(): void {
-    const widths = COLUMN_WIDTHS[columns]
+    const widths = WIDTH_SPANS[frameWidth]
     layout.style.setProperty('--frame-w', widths.frame)
     layout.style.setProperty('--side-w', widths.side)
     layout.style.setProperty('--side-gap', widths.gap)
-    layout.dataset.cols = String(columns)
+    layout.dataset.width = frameWidth
 
     for (const item of segmentedItems) {
-      const active = item.count === columns
+      const active = item.width === frameWidth
       item.element.classList.toggle('is-active', active)
       item.element.setAttribute('aria-pressed', active ? 'true' : 'false')
     }

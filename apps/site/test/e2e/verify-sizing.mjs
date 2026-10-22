@@ -61,11 +61,11 @@ const click = async (re) => {
   await btn(re).click()
 }
 
-// ---- A. host layout change: 1 column -> 3 columns ----
-await click(/^1 col/i)
+// ---- A. host layout change: 1/3 width -> full width ----
+await click(/^1\/3/)
 await page.waitForTimeout(900)
 const wide = await snap()
-await click(/^3 col/i)
+await click(/^full/i)
 const switching = []
 const t0 = Date.now()
 for (let i = 0; i < 70; i++) {
@@ -82,9 +82,9 @@ const unclipped = switching.filter((s) => s.childOverflowY !== 'hidden' || (s.gu
 const morphPhases = switching.filter((s) => s.phase === 'expanding' || s.phase === 'collapsing')
 
 check(
-  'layout: spanning 3 columns widens the frame',
+  'layout: the full width widens the frame',
   narrow.frameW > wide.frameW + 100,
-  `1col=${wide.frameW} 3col=${narrow.frameW}`,
+  `1/3=${wide.frameW} full=${narrow.frameW}`,
 )
 check(
   'layout: a resize phase is announced',
@@ -100,12 +100,12 @@ check('layout: settles back to idle', narrow.phase === 'idle', `phase=${narrow.p
 check(
   'layout: the wider frame needs less height',
   narrow.frameH < wide.frameH - 40,
-  `1col=${wide.frameH} 3col=${narrow.frameH}`,
+  `1/3=${wide.frameH} full=${narrow.frameH}`,
 )
 check(
   'layout: the framed app reflows with its container',
   wide.childArrangement === 'stacked' && narrow.childArrangement === 'side-by-side',
-  `1col=${wide.childArrangement} 3col=${narrow.childArrangement}`,
+  `1/3=${wide.childArrangement} full=${narrow.childArrangement}`,
 )
 check(
   'layout: no overflow window beyond two frames',
@@ -228,15 +228,9 @@ const rmSnap = () =>
       childRect: de ? +de.getBoundingClientRect().height.toFixed(1) : null,
     }
   })
-await rmPage
-  .getByRole('button', { name: /^1 col/i })
-  .first()
-  .click()
+await rmPage.getByRole('button', { name: /^1\/3/ }).first().click()
 await rmPage.waitForTimeout(600)
-await rmPage
-  .getByRole('button', { name: /^3 col/i })
-  .first()
-  .click()
+await rmPage.getByRole('button', { name: /^full/i }).first().click()
 const rmPhases = new Set()
 for (let i = 0; i < 25; i++) {
   rmPhases.add((await rmSnap()).phase)

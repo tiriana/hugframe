@@ -148,7 +148,8 @@ check(
   framedShell.framed === 'true' && framedShell.view === 'doc',
   JSON.stringify(framedShell),
 )
-await frame.locator('#doc-state').fill('Rolling the fix to staging now')
+await frame.locator('#doc-state').click()
+await page.keyboard.type('Rolling the fix to staging now')
 const typed = await frame.locator('#doc-state').inputValue()
 check(
   'state: the framed document accepts typed state',
@@ -275,7 +276,7 @@ await page.screenshot({ path: `${shots}/06-second-expanded.png` })
 await page.keyboard.press('Escape')
 await page.waitForTimeout(900)
 
-// 7. the demo must never scroll sideways, at rest or while a column change is in
+// 7. the demo must never scroll sideways, at rest or while a width change is in
 //    flight: the width transition is the one moment a rounding error could overflow.
 const sidewaysGap = () =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
@@ -286,12 +287,12 @@ const gapAtRest = async (width) => {
   return await sidewaysGap()
 }
 
-const worstGapDuringColumnChange = async (width) => {
+const worstGapDuringWidthChange = async (width) => {
   await page.setViewportSize({ width, height: 900 })
   await page.waitForTimeout(700)
-  await page.getByRole('button', { name: /^1 col/i }).click()
+  await page.getByRole('button', { name: /^1\/3/ }).click()
   await page.waitForTimeout(500)
-  await page.getByRole('button', { name: /^3 col/i }).click()
+  await page.getByRole('button', { name: /^full/i }).click()
   const samples = []
   for (let i = 0; i < 40; i += 1) {
     samples.push(await sidewaysGap())
@@ -307,7 +308,7 @@ for (const width of [1440, 1024, 420]) {
 }
 
 for (const width of [1440, 1024]) {
-  const worst = await worstGapDuringColumnChange(width)
+  const worst = await worstGapDuringWidthChange(width)
   check(`sideways: none mid-glide at ${width}`, worst <= 0, `worst scrollWidth-innerWidth=${worst}`)
 }
 

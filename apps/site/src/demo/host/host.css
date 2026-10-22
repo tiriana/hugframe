@@ -316,7 +316,7 @@
     opacity 300ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-.layout[data-cols='3'] .side-panel {
+.layout[data-width='full'] .side-panel {
   opacity: 0;
 }
 
@@ -380,7 +380,7 @@
     margin-top: 20px;
   }
 
-  .layout[data-cols='3'] .side-panel {
+  .layout[data-width='full'] .side-panel {
     opacity: 1;
   }
 }
