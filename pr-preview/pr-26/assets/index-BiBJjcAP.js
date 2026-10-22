@@ -1,4 +1,4 @@
-import"./theme-Bv_q4zvD.js";import{t as e}from"./dom-D2NfhsBJ.js";import{r as t,t as n}from"./site-DDu5dp2E.js";var r=`/hugframe/pr-preview/pr-26/`,i=`${r}child.html`,a=`${r}child.html?view=second`,o=`clamp(280px, 42vh, 460px)`,s=[`1/3`,`2/3`,`full`],c={"1/3":{frame:`34%`,side:`calc(66% - 20px)`,gap:`20px`},"2/3":{frame:`62%`,side:`calc(38% - 20px)`,gap:`20px`},full:{frame:`100%`,side:`100%`,gap:`0px`}},l=`import { createHugFrame } from 'hugframe'
+import"./theme-Bv_q4zvD.js";import{t as e}from"./dom-D2NfhsBJ.js";import{r as t,t as n}from"./site-DvkbSpWv.js";var r=`/hugframe/pr-preview/pr-26/`,i=`${r}child.html`,a=`${r}child.html?view=second`,o=`clamp(280px, 42vh, 460px)`,s=[`1/3`,`2/3`,`full`],c={"1/3":{frame:`34%`,side:`calc(66% - 20px)`,gap:`20px`},"2/3":{frame:`62%`,side:`calc(38% - 20px)`,gap:`20px`},full:{frame:`100%`,side:`100%`,gap:`0px`}},l=`import { createHugFrame } from 'hugframe'
 import 'hugframe/css'
 
 const frame = createHugFrame({ container: el, src: '/app.html', title: 'App' })
