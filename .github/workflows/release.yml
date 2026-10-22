@@ -62,3 +62,10 @@ jobs:
             echo "::notice::dispatching the publish workflow for ${tag}"
             gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --field "tag=${tag}"
           done
+
+      # The dispatch above returns as soon as the publish workflow is queued, so
+      # this waits for the released versions to actually reach the registry and
+      # fails the release run if they never do.
+      - name: Verify the released versions reached the registry
+        if: steps.release.outputs.releases_created == 'true'
+        run: node scripts/verify-published.mjs --wait 300

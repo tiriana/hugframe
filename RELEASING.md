@@ -55,7 +55,9 @@ new tag. A version that is already on the registry is skipped rather than failin
 
 The publish workflow authenticates with OpenID Connect, so no long-lived registry token is stored in this
 repository. Register the publisher once per package, then delete the section that does not apply to this
-project.
+project. A package whose trusted publisher is not registered yet fails its publish with a `404` on the
+`PUT`, which is how `@hugframe/react`'s first release never reached npm, so register the publisher before a
+package's first release rather than after.
 
 For npm:
 
