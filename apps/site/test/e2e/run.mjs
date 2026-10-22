@@ -14,6 +14,7 @@ const SUITES = [
   'verify-react.mjs',
   'verify-options.mjs',
   'verify-playground.mjs',
+  'verify-fallback.mjs',
 ]
 
 const run = (command, args, env) =>
