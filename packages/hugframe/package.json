@@ -1,6 +1,6 @@
 {
   "name": "hugframe",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "An iframe that sizes itself to its content and morphs into a chromeless full-window view. Dependency-free TypeScript, cross-domain over postMessage.",
   "license": "MIT",
   "type": "module",
