@@ -558,7 +558,7 @@ side effect and the package is not marked side-effect free.</p>
 <td><code>targetOrigin</code></td>
 <td><code>string</code></td>
 <td>current origin</td>
-<td>Origin expected from the framed document. <code>&#39;*&#39;</code> skips the check.</td>
+<td>Origin expected from the framed document. <code>&#39;*&#39;</code> skips the origin check; the message still has to come from the frame&#39;s own window.</td>
 </tr>
 <tr>
 <td><code>initialMode</code></td>
@@ -928,8 +928,8 @@ function getHugFrameChild(): HugFrameChild | undefined
 <tbody><tr>
 <td><code>targetOrigin</code></td>
 <td><code>string</code></td>
-<td><code>&#39;*&#39;</code> (no check)</td>
-<td>Origin expected from the host.</td>
+<td><code>&#39;*&#39;</code></td>
+<td>Origin expected from the host. The parent window is required whatever this is.</td>
 </tr>
 <tr>
 <td><code>sizeSelector</code></td>
@@ -968,11 +968,16 @@ function getHugFrameChild(): HugFrameChild | undefined
 <td>The host started driving the height, or went back to content.</td>
 </tr>
 </tbody></table>
+<p><code>targetOrigin</code> defaults differently on the two sides: the host defaults to its own origin, because it knows
+where it serves its framed document from, while the framed document defaults to <code>&#39;*&#39;</code>, because it cannot
+know which host embedded it. The wildcard relaxes the origin check only — the framed document always
+requires <code>event.source</code> to be its parent window.</p>
 <h3>Instance</h3>
 <p><code>isFramed</code>, <code>mode</code> and <code>sizing</code> are read-only. Methods: <code>resize()</code>, <code>suspend()</code>, <code>resume()</code>,
 <code>requestExpand()</code>, <code>requestCollapse()</code>, <code>requestClose()</code>, <code>sendMessage(payload)</code>, <code>destroy()</code>.</p>
 <p>The runtime is a safe no-op when the document is opened outside a frame, so a framed app can also be
-previewed directly.</p>
+previewed directly. It warns once through <code>console.warn</code> when two consecutive size reports equal the
+frame&#39;s own height, the signature of a document laid out at <code>height: 100vh</code>.</p>
 <h3>Attributes the runtime writes</h3>
 <p><code>data-hug-sizing</code> — <code>content</code> or <code>fixed</code> — on the framed document&#39;s root element, for the framed
 document&#39;s own CSS. Keying <code>overflow</code> off <code>data-hug-sizing=&quot;fixed&quot;</code> is what lets a host-driven height
@@ -1031,8 +1036,10 @@ validated by an exported guard.</p>
 <p><code>HUGFRAME_SOURCE</code> (the string <code>&#39;hugframe&#39;</code>), <code>HUGFRAME_Z_INDEX</code>, <code>isHugFrameChildMessage(value)</code>,
 <code>isHugFrameParentMessage(value)</code> and <code>postHugFrameMessage(target, message, targetOrigin)</code>.</p>
 <p>Two checks matter and both are enforced. The host verifies that <code>event.source</code> is the frame&#39;s own
-<code>contentWindow</code> as well as the origin, and the framed document verifies the origin and its parent window.
-Trusting the <code>source</code> field inside the payload alone would be a security regression.</p>
+<code>contentWindow</code> as well as the origin, and the framed document verifies that <code>event.source</code> is its parent
+window as well as the origin. The parent check holds even when <code>targetOrigin</code> is <code>&#39;*&#39;</code>, so the wildcard
+widens which origins are accepted, not which windows. Trusting the <code>source</code> field inside the payload alone
+would be a security regression.</p>
 <h2>Appearance: parts, state attributes and the layered stylesheet</h2>
 <p>The appearance API is three things: the four colour custom properties, the three
 engine-coupled custom properties, and the stable <code>data-hug-part</code> hooks on every
@@ -1086,8 +1093,9 @@ rule that already used it, and the whole stylesheet is wrapped in
 </tr>
 </tbody></table>
 <p>The four colour tokens carry a library-owned light/dark pair and are the documented
-colour path; the other three are coupled to the engine. These seven are the entire
-token surface.</p>
+colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
+set all four rather than one; the other three are coupled to the engine. These seven are the
+entire token surface.</p>
 <h3>Parts</h3>
 <p>Every element the engine generates carries a <code>data-hug-part</code> attribute. It is the
 documented selector contract; the <code>.hug-*</code> classes remain on the same nodes, but new
@@ -1150,7 +1158,7 @@ unlayered CSS:</p>
 </code></pre>
 <h2>Layout rules for credible framing</h2>
 <ol>
-<li>Never use <code>vh</code>/<code>dvh</code>/<code>vw</code> on the axis the host controls while content-sized. A <code>min-height: 100vh</code> in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop.</li>
+<li>Never use <code>vh</code>/<code>dvh</code>/<code>vw</code> on the axis the host controls while content-sized. A <code>min-height: 100vh</code> in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document&#39;s runtime warns once when two consecutive size reports equal the frame&#39;s own height, which is that loop&#39;s signature.</li>
 <li>Do not give the framed document&#39;s <code>html</code> or <code>body</code> a <code>height: 100%</code>.</li>
 <li>Use container queries, not media queries, inside the framed document: its width has nothing to do with the viewport.</li>
 </ol>
