@@ -134,9 +134,7 @@
   position: relative;
   overflow: hidden;
   height: 108px;
-  /* It repeats the box's own literal radius and takes the frame's surface and line tokens,
-     so the handle preview matches the frame in either scheme. */
-  border-radius: 14px;
+  border-radius: var(--frame-radius); /* Mirrors the site frame radius so the preview matches. */
   background: var(--hug-surface);
   box-shadow: inset 0 0 0 1px var(--hug-line);
 }
