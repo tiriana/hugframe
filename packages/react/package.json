@@ -1,6 +1,6 @@
 {
   "name": "@hugframe/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React bindings for hugframe: an iframe that hugs its content, then morphs into a chromeless full-window view.",
   "license": "MIT",
   "type": "module",
