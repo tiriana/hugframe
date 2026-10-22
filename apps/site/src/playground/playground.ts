@@ -1052,10 +1052,6 @@ export function mountPlayground(container: HTMLElement): void {
         collapseOnEscapeField.el,
         targetOriginField.el,
         titleField.el,
-        el('p', {
-          class: 'pg-note',
-          text: 'reportEpsilon belongs to the framed document: it is passed to createHugFrameChild() inside the frame, not to the host, so no control here can drive it.',
-        }),
       ]),
     },
     {
