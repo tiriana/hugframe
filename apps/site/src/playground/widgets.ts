@@ -33,7 +33,7 @@ interface ShellParts {
   control: HTMLElement
   hint?: string
   defaultText: string
-  /** Overrides the "default …" note; use it for a control that mirrors live state. */
+  /** Overrides the "default …" note; pass '' to leave the row without a note. */
   meta?: string
   labelIsInput?: boolean
 }
@@ -42,12 +42,11 @@ function shell(parts: ShellParts): HTMLElement {
   const label = parts.labelIsInput
     ? el('label', { class: 'ctl__label', attrs: { for: parts.id }, text: parts.label })
     : el('span', { class: 'ctl__label', attrs: { id: parts.id }, text: parts.label })
+  const metaText = parts.meta ?? `default ${parts.defaultText}`
   return el('div', { class: 'ctl' }, [
     el('div', { class: 'ctl__head' }, [
       label,
-      el('span', { class: 'ctl__meta' }, [
-        el('span', { text: parts.meta ?? `default ${parts.defaultText}` }),
-      ]),
+      metaText ? el('span', { class: 'ctl__meta' }, [el('span', { text: metaText })]) : null,
     ]),
     parts.control,
     parts.hint ? el('p', { class: 'ctl__hint', text: parts.hint }) : null,
@@ -63,6 +62,7 @@ export interface RangeSpec {
   value: number
   unit?: string
   hint?: string
+  meta?: string
   format?: (value: number) => string
   onInput: (value: number) => void
 }
@@ -97,6 +97,7 @@ export function rangeControl(spec: RangeSpec): Control<number> {
       control: el('div', { class: 'ctl__inline' }, [input, output]),
       hint: spec.hint,
       defaultText: format(spec.value),
+      meta: spec.meta,
       labelIsInput: true,
     }),
     default: spec.value,

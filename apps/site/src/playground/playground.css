@@ -128,30 +128,42 @@
 }
 
 /* The collapse-handle preview: a small canvas painted with the frame's own tokens, holding
-   the handle exactly as the engine builds it. It sits below the frame so the handle can be
-   tuned while the frame is still inline. */
-.pg-preview {
-  margin-top: 18px;
-}
-
-.pg-preview__title {
-  margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 15px;
-}
-
-/* The frame's own surface, painted by a page-owned canvas. The element also carries the
-   library's `hug-root` class, so the surface and line tokens — and their dark-scheme values —
-   resolve here exactly as they do on the frame. */
+   the handle exactly as the engine builds it. It sits in the Collapse-control group, so the
+   handle can be tuned and pressed while the frame is still inline. */
 .pg-preview__surface {
   position: relative;
-  height: 92px;
+  overflow: hidden;
+  height: 108px;
   /* It repeats the box's own literal radius and takes the frame's surface and line tokens,
      so the handle preview matches the frame in either scheme. */
   border-radius: 14px;
   background: var(--hug-surface);
   box-shadow: inset 0 0 0 1px var(--hug-line);
+}
+
+/* A stand-in for the framed document, so the handle is previewed on a surface rather than in
+   an empty box. It only sets the scene; it is not interactive and not announced. */
+.pg-preview__mock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.pg-preview__bar {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hug-text) 9%, transparent);
+}
+
+.pg-preview__bar--title {
+  width: 38%;
+  height: 13px;
+  background: color-mix(in srgb, var(--hug-text) 16%, transparent);
+}
+
+.pg-preview__bar--short {
+  width: 52%;
 }
 
 .pg-preview__note {
@@ -357,6 +369,12 @@
   color: var(--text);
 }
 
+/* The phase item stays in the row while the frame is idle; hiding it rather than removing it
+   keeps the readout from moving when a resize or a morph starts. */
+.pg-meter__item--idle {
+  visibility: hidden;
+}
+
 /* The dock ---------------------------------------------------------------------
    While the frame is expanded it covers the page, so this floating panel lifts the
    readout and the collapse picker above it. z-index is set from the frame's own
@@ -439,6 +457,22 @@
 }
 
 .ctl__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Two controls that set one height: the token paints before scripts run and the engine option
+   overwrites it, so they are grouped and read in that order rather than as two options. */
+.pg-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+
+.pg-pair__legend {
   margin: 0;
   font-size: 12px;
   color: var(--muted);

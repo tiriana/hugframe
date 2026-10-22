@@ -244,21 +244,68 @@ check(
 )
 
 // The framed document must survive every affordance swap: a rebuild would reload
-// it, which is the one thing this page exists to show is unnecessary.
+// it, which is the one thing this page exists to show is unnecessary. Each swap
+// must also reach the frame's own collapse slot — the handle changes, or vanishes
+// for Hidden — without the iframe reloading. The demo's affordance row was removed
+// with this coverage, so it is asserted here against #pg-affordance instead.
 await frame.evaluate(() => {
   document.documentElement.dataset.probe = 'alive'
 })
+const collapseHandle = () =>
+  page.evaluate(() => {
+    const root = document.querySelector('.hug-root')
+    const handle = root?.querySelector(".hug-box [data-hug-part='collapse']")?.firstElementChild
+    return {
+      mode: root?.getAttribute('data-mode'),
+      present: !!handle,
+      className: handle?.className ?? null,
+      label: handle?.getAttribute('aria-label') ?? null,
+      text: handle?.textContent?.trim() ?? '',
+      html: handle?.innerHTML ?? null,
+    }
+  })
 const modes = ['Custom SVG', 'Text glyph', 'Custom control', 'Hidden', 'Default glyph']
 let survived = true
+let reached = true
+const affordances = {}
 for (const mode of modes) {
-  await clickReachable(mode)
+  if (!(await clickReachable(mode))) reached = false
   await page.waitForTimeout(300)
+  affordances[mode] = await collapseHandle()
   if ((await framedMarker()) !== 'alive') survived = false
 }
 check(
   'switching the collapse affordance five ways never remounts the framed document',
-  survived,
-  `marker survived=${survived} across ${modes.length} swaps`,
+  survived && reached,
+  `marker survived=${survived}, every picker reached=${reached} across ${modes.length} swaps`,
+)
+check(
+  'the default handle renders into the collapse slot, labelled for assistive tech',
+  affordances['Default glyph'].present &&
+    affordances['Default glyph'].className === 'hug-collapse' &&
+    affordances['Default glyph'].label === 'Return to inline view',
+  JSON.stringify(affordances['Default glyph']),
+)
+check(
+  'a custom icon replaces the glyph but keeps the built-in button',
+  affordances['Custom SVG'].present &&
+    affordances['Custom SVG'].className === 'hug-collapse' &&
+    affordances['Custom SVG'].label === 'Return to inline view' &&
+    affordances['Custom SVG'].html !== affordances['Default glyph'].html,
+  JSON.stringify(affordances['Custom SVG']),
+)
+check(
+  'a custom control takes over the slot while the frame stays expanded',
+  affordances['Custom control'].present &&
+    affordances['Custom control'].className === 'pg-collapse' &&
+    affordances['Custom control'].label === 'Return to inline view' &&
+    affordances['Custom control'].mode === 'expanded',
+  JSON.stringify(affordances['Custom control']),
+)
+check(
+  'Hidden renders no handle at all while the frame stays expanded',
+  affordances.Hidden.mode === 'expanded' && affordances.Hidden.present === false,
+  JSON.stringify(affordances.Hidden),
 )
 
 // The preview is what makes the collapse styling visible while the frame is
