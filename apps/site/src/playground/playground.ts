@@ -377,7 +377,6 @@ export function mountPlayground(container: HTMLElement): void {
   let mode: HugFrameMode = 'inline'
   let phase: HugFramePhase = 'idle'
   let sizing: HugFrameSizing = 'content'
-  let ready = false
   let measured: number | null = null
   let uiReady = false
 
@@ -405,16 +404,10 @@ export function mountPlayground(container: HTMLElement): void {
   const frameMount = el('div', { class: 'pg-frame' })
 
   const heightItem = meterItem('content height')
-  const modeItem = meterItem('mode')
   const phaseItem = meterItem('phase')
-  const sizingItem = meterItem('sizing')
-  const readyItem = meterItem('status')
   const meter = el('div', { class: 'pg-meter', attrs: { 'aria-live': 'polite' } }, [
     heightItem.root,
-    modeItem.root,
     phaseItem.root,
-    sizingItem.root,
-    readyItem.root,
   ])
   const statusSlot = el('div', { class: 'pg-status' }, [meter])
 
@@ -427,10 +420,6 @@ export function mountPlayground(container: HTMLElement): void {
     minHeight: state.minHeight,
     maxHeight: state.maxHeight,
     initialHeight: state.initialHeight,
-    onReady: () => {
-      ready = true
-      renderMeter()
-    },
     onModeChange: (next) => {
       mode = next
       renderMeter()
@@ -472,12 +461,9 @@ export function mountPlayground(container: HTMLElement): void {
   function renderMeter(): void {
     heightItem.label.textContent = sizing === 'fixed' ? 'frame height' : 'content height'
     heightItem.value.textContent = measured === null ? 'measuring' : `${measured}px`
-    modeItem.value.textContent = mode
     phaseItem.value.textContent = phase
     phaseItem.value.className = phase === 'idle' ? 'pill pill--ok' : 'pill pill--busy'
-    sizingItem.value.textContent = sizing
-    readyItem.value.textContent = ready ? 'ready' : 'waiting'
-    readyItem.value.className = ready ? 'pill pill--ok' : 'pill pill--wait'
+    phaseItem.root.classList.toggle('pg-meter__item--idle', phase === 'idle') // hidden, never removed, so the row keeps its height
   }
 
   // ---- controls -------------------------------------------------------------------
@@ -574,6 +560,15 @@ export function mountPlayground(container: HTMLElement): void {
     },
   })
 
+  const initialHeightPair = el('div', { class: 'pg-pair' }, [
+    el('p', {
+      class: 'pg-pair__legend',
+      text: 'One height in two steps: the token paints before scripts run, then the engine value overwrites it once the frame reports ready.',
+    }),
+    initialHeightField.el,
+    initialHeightTokenField.el,
+  ])
+
   const resizeSettleField = rangeControl({
     id: 'pg-resize-settle',
     label: 'resizeSettleMs',
@@ -582,6 +577,7 @@ export function mountPlayground(container: HTMLElement): void {
     step: 10,
     value: state.resizeSettleMs,
     unit: 'ms',
+    meta: '',
     hint: 'Width quiescence the resizing phase waits for before settling.',
     onInput: (value) => {
       state.resizeSettleMs = value
@@ -596,6 +592,7 @@ export function mountPlayground(container: HTMLElement): void {
     step: 10,
     value: state.resizeSafetyMs,
     unit: 'ms',
+    meta: '',
     hint: "Ceiling on the resizing phase's wait.",
     onInput: (value) => {
       state.resizeSafetyMs = value
@@ -610,6 +607,7 @@ export function mountPlayground(container: HTMLElement): void {
     step: 1,
     value: state.resizeWidthEpsilon,
     unit: 'px',
+    meta: '',
     hint: 'Width change at or below which a layout change is not treated as a resize.',
     onInput: (value) => {
       state.resizeWidthEpsilon = value
@@ -624,6 +622,7 @@ export function mountPlayground(container: HTMLElement): void {
     step: 10,
     value: state.morphSettleMarginMs,
     unit: 'ms',
+    meta: '',
     hint: 'Added to the morph duration for the transitionend fallback timer.',
     onInput: (value) => {
       state.morphSettleMarginMs = value
@@ -945,35 +944,27 @@ export function mountPlayground(container: HTMLElement): void {
   // The preview is a page-owned canvas, but it is given the library's `hug-root` class so the
   // four colour tokens and the dark-scheme override resolve on it exactly as they do on the
   // frame. It then paints the frame's own surface and edge instead of a hardcoded light panel.
-  const previewSurface = el('div', { class: 'hug-root pg-preview__surface' })
+  // The mock behind the handle keeps the canvas from reading as an empty box.
+  const previewMock = el('div', { class: 'pg-preview__mock', attrs: { 'aria-hidden': 'true' } }, [
+    el('span', { class: 'pg-preview__bar pg-preview__bar--title' }),
+    el('span', { class: 'pg-preview__bar' }),
+    el('span', { class: 'pg-preview__bar pg-preview__bar--short' }),
+  ])
+  const previewSlot = el('div', { attrs: { 'data-hug-part': 'collapse' } })
+  const previewSurface = el('div', { class: 'hug-root pg-preview__surface' }, [
+    previewMock,
+    previewSlot,
+  ])
   const previewNote = el('p', { class: 'pg-preview__note' })
-  const preview = el(
-    'section',
-    { class: 'pg-preview', attrs: { 'aria-labelledby': 'pg-preview-title' } },
-    [
-      el('h3', {
-        class: 'pg-preview__title',
-        attrs: { id: 'pg-preview-title' },
-        text: 'Collapse handle, live',
-      }),
-      previewSurface,
-      previewNote,
-    ],
-  )
 
   // The handle is built exactly as the engine builds it and dropped into the same
   // [data-hug-part='collapse'] slot the box uses, so recipes that target the slot's child —
   // or the built-in glyph — apply here too.
   function renderPreview(options: Pick<HugFrameOptions, 'collapseIcon' | 'renderCollapse'>): void {
     const node = buildCollapseAffordance(options, { collapse: () => frame.collapse() })
-    if (node) {
-      const slot = el('div', { attrs: { 'data-hug-part': 'collapse' } }, [node])
-      previewSurface.replaceChildren(slot)
-    } else {
-      previewSurface.replaceChildren()
-    }
+    previewSlot.replaceChildren(...(node ? [node] : []))
     previewNote.textContent = node
-      ? 'The handle as the frame renders it, through the same slot. Style it with the recipes above; press it and the frame collapses.'
+      ? 'The handle as the frame renders it, through the same slot. The library shows it only while the frame is expanded, so this canvas is where it is styled while the frame is still inline.'
       : 'This mode renders no handle at all — the page collapses the frame instead.'
   }
 
@@ -992,7 +983,6 @@ export function mountPlayground(container: HTMLElement): void {
       ]),
       statusSlot,
       frameMount,
-      preview,
     ],
   )
 
@@ -1028,6 +1018,8 @@ export function mountPlayground(container: HTMLElement): void {
 
   const collapseGroupBody = groupBody([
     affordanceField.el,
+    previewSurface,
+    previewNote,
     el('p', {
       class: 'pg-note',
       text: 'How the control looks is CSS now, not tokens. The Styling recipes in Appearance target the slot and the glyph the handle renders into.',
@@ -1045,19 +1037,14 @@ export function mountPlayground(container: HTMLElement): void {
         heightLengthField.el,
         minHeightField.el,
         maxHeightField.el,
-        initialHeightField.el,
-        initialHeightTokenField.el,
+        initialHeightPair,
       ]),
     },
     {
       id: 'behaviour',
       title: 'Behaviour',
-      summary: 'Timing, the expanded box and the host-side booleans.',
+      summary: 'The expanded box, and the host-side booleans and strings.',
       body: groupBody([
-        resizeSettleField.el,
-        resizeSafetyField.el,
-        resizeEpsilonField.el,
-        morphSettleField.el,
         expandedWidthField.el,
         expandedHeightField.el,
         lockScrollField.el,
@@ -1065,24 +1052,34 @@ export function mountPlayground(container: HTMLElement): void {
         collapseOnEscapeField.el,
         targetOriginField.el,
         titleField.el,
-        el('p', {
-          class: 'pg-note',
-          text: 'reportEpsilon belongs to the framed document: it is passed to createHugFrameChild() inside the frame, not to the host, so no control here can drive it.',
-        }),
+      ]),
+    },
+    {
+      id: 'timing',
+      title: 'Timing (advanced)',
+      summary:
+        "The resizer's settle windows and thresholds. Tuned by default; change one to watch a settle.",
+      body: groupBody([
+        resizeSettleField.el,
+        resizeSafetyField.el,
+        resizeEpsilonField.el,
+        morphSettleField.el,
       ]),
     },
     {
       id: 'appearance',
       title: 'Appearance',
-      summary: 'The four colour tokens, and recipes that restyle the frame with your own CSS.',
+      summary:
+        'The colour and duration tokens, and recipes that restyle the frame with your own CSS.',
       body: groupBody([
         surfaceField.el,
         lineField.el,
         textField.el,
         accentField.el,
+        durationField.el,
         el('p', {
           class: 'pg-note',
-          text: 'Four of the seven public tokens are colours; --hug-duration lives in Motion and --hug-initial-height in Sizing. --hug-z-index is engine-coupled, so the page reads it but never writes it. Radius, borders, shadows, the backdrop, the glass and the close control are plain literals in the stylesheet now — style them through the parts below.',
+          text: 'Four of the seven public tokens are colours, --hug-duration is the fifth and --hug-initial-height the sixth; --hug-z-index is engine-coupled, so the page reads it but never writes it. The other durations and both easings were retired with the token surface — their values are literals in the stylesheet now, so a control for them would write a property nothing reads. Radius, borders, shadows, the backdrop, the glass and the close control are literals too — style them through the parts below.',
         }),
         recipeField.el,
         recipeCode,
@@ -1093,21 +1090,9 @@ export function mountPlayground(container: HTMLElement): void {
       ]),
     },
     {
-      id: 'motion',
-      title: 'Motion',
-      summary: 'The one duration token still left; the rest are literals in the stylesheet.',
-      body: groupBody([
-        durationField.el,
-        el('p', {
-          class: 'pg-note',
-          text: 'The other durations and both easings were retired with the token surface; their values are literals in the stylesheet, so a control for them would write a property nothing reads.',
-        }),
-      ]),
-    },
-    {
       id: 'collapse',
       title: 'Collapse control',
-      summary: 'Five ways to show the close control, previewed under the frame.',
+      summary: 'Five ways to show the close control, previewed live.',
       body: collapseGroupBody,
     },
   ])

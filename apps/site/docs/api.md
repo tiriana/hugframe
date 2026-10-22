@@ -232,7 +232,9 @@ The appearance API is three things: the four colour custom properties, the three
 engine-coupled custom properties, and the stable `data-hug-part` hooks on every
 element the engine generates. Every other visual value is a plain literal in the
 rule that already used it, and the whole stylesheet is wrapped in
-`@layer hugframe`.
+`@layer hugframe`. The framed box is one of those literals: it ships square —
+`border-radius: 0` on `[data-hug-part='box']` — so a rounded frame is the host's
+to set, as the demo does with `14px`.
 
 ### Custom properties
 

@@ -7,8 +7,8 @@ import { baseUrl, createReport } from './lib/harness.mjs'
 // a list of knobs. Each of those is asserted here, along with the three defects
 // that were found by hand and are easy to reintroduce: a segmented control that
 // never moves its active pill, a duration written with the wrong unit (which
-// silently makes every morph instant), and a framed composer that cannot send
-// because nothing selected a thread.
+// silently makes every morph instant), and a framed document whose typed state is
+// lost because the frame was remounted instead of morphed.
 const BASE = baseUrl()
 const { check, finish } = createReport('playground: live settings drive the frame')
 
@@ -226,39 +226,85 @@ check(
   JSON.stringify(expanding),
 )
 
-// A framed document that can actually reply: nothing selected a thread used to
-// leave the composer permanently disabled.
+// The framed document keeps its own state across a morph. The playground's promise is
+// that the frame is never remounted, and the state field is the observable proof: it is
+// filled here, while the frame is expanded, and read back after the collapse below. The
+// retired composer could not be replaced one-for-one because the framed document no
+// longer sends; state survival is the claim that survives the redesign.
 const frame = page.frames().find((candidate) => candidate.url().includes('child.html'))
-const composerBefore = await frame.evaluate(() => document.body.innerText.length)
-await frame.getByRole('textbox').first().fill('a message from the suite')
-await frame.getByRole('button', { name: 'Send', exact: true }).click()
-await page.waitForTimeout(600)
-const composer = await frame.evaluate(() => ({
-  echoed: document.body.innerText.includes('a message from the suite'),
-  after: document.body.innerText.length,
-}))
+await frame.locator('#doc-state').focus()
+await page.keyboard.type('a message from the suite')
+await page.waitForTimeout(200)
+const stateFilled = await frame.locator('#doc-state').inputValue()
 check(
-  'a message typed into the framed app can be sent',
-  composer.echoed && composer.after !== composerBefore,
-  JSON.stringify({ ...composer, before: composerBefore }),
+  'the framed document accepts typed state',
+  stateFilled === 'a message from the suite',
+  JSON.stringify({ stateFilled }),
 )
 
 // The framed document must survive every affordance swap: a rebuild would reload
-// it, which is the one thing this page exists to show is unnecessary.
+// it, which is the one thing this page exists to show is unnecessary. Each swap
+// must also reach the frame's own collapse slot — the handle changes, or vanishes
+// for Hidden — without the iframe reloading. The demo's affordance row was removed
+// with this coverage, so it is asserted here against #pg-affordance instead.
 await frame.evaluate(() => {
   document.documentElement.dataset.probe = 'alive'
 })
+const collapseHandle = () =>
+  page.evaluate(() => {
+    const root = document.querySelector('.hug-root')
+    const handle = root?.querySelector(".hug-box [data-hug-part='collapse']")?.firstElementChild
+    return {
+      mode: root?.getAttribute('data-mode'),
+      present: !!handle,
+      className: handle?.className ?? null,
+      label: handle?.getAttribute('aria-label') ?? null,
+      text: handle?.textContent?.trim() ?? '',
+      html: handle?.innerHTML ?? null,
+    }
+  })
 const modes = ['Custom SVG', 'Text glyph', 'Custom control', 'Hidden', 'Default glyph']
 let survived = true
+let reached = true
+const affordances = {}
 for (const mode of modes) {
-  await clickReachable(mode)
+  if (!(await clickReachable(mode))) reached = false
   await page.waitForTimeout(300)
+  affordances[mode] = await collapseHandle()
   if ((await framedMarker()) !== 'alive') survived = false
 }
 check(
   'switching the collapse affordance five ways never remounts the framed document',
-  survived,
-  `marker survived=${survived} across ${modes.length} swaps`,
+  survived && reached,
+  `marker survived=${survived}, every picker reached=${reached} across ${modes.length} swaps`,
+)
+check(
+  'the default handle renders into the collapse slot, labelled for assistive tech',
+  affordances['Default glyph'].present &&
+    affordances['Default glyph'].className === 'hug-collapse' &&
+    affordances['Default glyph'].label === 'Return to inline view',
+  JSON.stringify(affordances['Default glyph']),
+)
+check(
+  'a custom icon replaces the glyph but keeps the built-in button',
+  affordances['Custom SVG'].present &&
+    affordances['Custom SVG'].className === 'hug-collapse' &&
+    affordances['Custom SVG'].label === 'Return to inline view' &&
+    affordances['Custom SVG'].html !== affordances['Default glyph'].html,
+  JSON.stringify(affordances['Custom SVG']),
+)
+check(
+  'a custom control takes over the slot while the frame stays expanded',
+  affordances['Custom control'].present &&
+    affordances['Custom control'].className === 'pg-collapse' &&
+    affordances['Custom control'].label === 'Return to inline view' &&
+    affordances['Custom control'].mode === 'expanded',
+  JSON.stringify(affordances['Custom control']),
+)
+check(
+  'Hidden renders no handle at all while the frame stays expanded',
+  affordances.Hidden.mode === 'expanded' && affordances.Hidden.present === false,
+  JSON.stringify(affordances.Hidden),
 )
 
 // The preview is what makes the collapse styling visible while the frame is
@@ -285,6 +331,12 @@ check(
   'a reachable way back collapses the frame',
   collapsedByDock && collapsed.mode === 'inline',
   JSON.stringify({ clicked: collapsedByDock, mode: collapsed.mode }),
+)
+const stateAfterCollapse = await frame.locator('#doc-state').inputValue()
+check(
+  'the framed document keeps typed state across expand and collapse',
+  stateAfterCollapse === 'a message from the suite',
+  JSON.stringify({ filled: stateFilled, afterCollapse: stateAfterCollapse }),
 )
 
 const resetClicked = await clickReachable('Reset all')

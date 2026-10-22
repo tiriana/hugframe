@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 
+import { clickLastTocEntry, probePage } from './lib/docs-page.mjs'
 import { createReport, docsUrl } from './lib/harness.mjs'
 
 const URL = docsUrl()
@@ -7,50 +8,9 @@ const { check, finish } = createReport('reference page layout')
 
 const browser = await chromium.launch()
 
-const probe = async (width, height) => {
-  const page = await browser.newPage({ viewport: { width, height } })
-  const errors = []
-  page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text().slice(0, 160))
-  })
-  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message.slice(0, 160)))
-  await page.goto(URL, { waitUntil: 'load' })
-  await page.waitForTimeout(300)
-
-  const measured = await page.evaluate(() => {
-    const doc = document.documentElement
-    const tables = [...document.querySelectorAll('table')]
-    const widest = tables
-      .map((table) => {
-        const style = getComputedStyle(table)
-        return {
-          scrollWidth: table.scrollWidth,
-          clientWidth: table.clientWidth,
-          overflowX: style.overflowX,
-          display: style.display,
-          columns: table.querySelectorAll('thead th').length,
-        }
-      })
-      .sort((a, b) => b.scrollWidth - a.scrollWidth)[0]
-
-    return {
-      docScrollWidth: doc.scrollWidth,
-      viewport: window.innerWidth,
-      tables: tables.length,
-      widest,
-      headings: document.querySelectorAll('h2').length,
-      codeBlocks: document.querySelectorAll('pre').length,
-      icon: document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? null,
-      bodyBackground: getComputedStyle(document.body).backgroundColor,
-    }
-  })
-
-  await page.close()
-  return { ...measured, errors }
-}
-
-const phone = await probe(375, 800)
-const desktop = await probe(1280, 900)
+const phone = await probePage(browser, URL, 375, 800)
+const desktop = await probePage(browser, URL, 1280, 900)
+const wide = await probePage(browser, URL, 1440, 900)
 
 check(
   'the reference page renders its content',
@@ -86,6 +46,33 @@ check(
   'no console errors at either width',
   phone.errors.length === 0 && desktop.errors.length === 0,
   [...phone.errors, ...desktop.errors].slice(0, 2).join(' ; '),
+)
+
+check(
+  'the contents list is one entry per section, every one resolving to a heading',
+  phone.toc.sections === phone.headings && phone.toc.dangling === 0 && phone.toc.duplicateIds === 0,
+  JSON.stringify({ ...phone.toc, headings: phone.headings }),
+)
+
+// The list is a sidebar when the viewport can hold one and a stacked disclosure when it cannot,
+// so the assertion is on where it sits relative to the reading column, not on the breakpoint.
+for (const [label, probeResult, beside] of [
+  ['wide', wide, true],
+  ['desktop', desktop, false],
+  ['phone', phone, false],
+]) {
+  check(
+    `${label}: the contents sit ${beside ? 'beside' : 'above'} the reading column`,
+    beside ? probeResult.toc.beside : probeResult.toc.stacked,
+    JSON.stringify(probeResult.toc),
+  )
+}
+
+const followed = await clickLastTocEntry(browser, URL)
+check(
+  'clicking a contents entry scrolls to its heading and marks it',
+  followed.marked === followed.entry && followed.onScreen,
+  JSON.stringify(followed),
 )
 
 await browser.close()

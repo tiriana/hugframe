@@ -145,6 +145,30 @@ const docs = await (async () => {
   return { found, href, resolved, status, box, label }
 })()
 
+const react = await (async () => {
+  const page = await browser.newPage({ viewport: { width: 375, height: 800 } })
+  await page.goto(BASE, { waitUntil: 'load' })
+  await page.waitForTimeout(400)
+  // The React page is the site's third section; `exact` keeps the hero badge's longer
+  // label out of the match.
+  const link = page.getByRole('link', { name: 'React', exact: true }).first()
+  if (!(await link.count())) {
+    await page.close()
+    return { found: false }
+  }
+  const href = await link.getAttribute('href')
+  const box = await link.boundingBox()
+  const label = await link.evaluate(
+    (node) => node.getAttribute('aria-label') ?? node.textContent.trim(),
+  )
+  await page.close()
+
+  const found = /(^|\/)react\/?$/.test(href ?? '')
+  const resolved = new URL(href, BASE + '/').href
+  const status = await fetch(resolved, { redirect: 'follow' }).then((r) => r.status)
+  return { found, href, resolved, status, box, label }
+})()
+
 check('the header also links to the documentation', docs.found, JSON.stringify(docs))
 check(
   'that link resolves to the live reference',
@@ -159,6 +183,22 @@ check(
     docs.box.width >= 32 &&
     docs.box.height >= 32,
   JSON.stringify({ label: docs.label, box: docs.box }),
+)
+
+check('the header also links to the React page', react.found, JSON.stringify(react))
+check(
+  'that link resolves to the built React page',
+  react.status === 200,
+  `${react.resolved} -> ${react.status}`,
+)
+check(
+  'the React link names itself, and stays tappable on a phone',
+  typeof react.label === 'string' &&
+    react.label.length > 3 &&
+    react.box &&
+    react.box.width >= 32 &&
+    react.box.height >= 32,
+  JSON.stringify({ label: react.label, box: react.box }),
 )
 
 await browser.close()

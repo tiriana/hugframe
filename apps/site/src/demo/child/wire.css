@@ -1,0 +1,154 @@
+/* The placeholder shapes that stand in for a document: frame boundary, text card,
+   media block and the rows the host appends when it grows the content. */
+
+.wire-frame {
+  position: relative;
+  min-height: 120px;
+  border: 1.5px solid var(--text);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.wire-frame__inner {
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed var(--muted);
+  border-radius: 4px;
+}
+
+.wire-frame__corner {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--accent);
+}
+
+.wire-frame__corner--tl {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 3px;
+}
+
+.wire-frame__corner--tr {
+  top: -1px;
+  right: -1px;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 3px;
+}
+
+.wire-frame__corner--bl {
+  bottom: -1px;
+  left: -1px;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 3px;
+}
+
+.wire-frame__corner--br {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 3px;
+}
+
+.wire-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wire-card__title {
+  height: 12px;
+  width: 46%;
+  border-radius: 3px;
+  background: var(--text);
+  opacity: 0.5;
+}
+
+.wire-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.wire-line {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.wire-media {
+  margin-top: 12px;
+  height: 74px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      var(--line) calc(50% - 0.5px),
+      var(--line) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    linear-gradient(
+      to bottom right,
+      transparent calc(50% - 0.5px),
+      var(--line) calc(50% - 0.5px),
+      var(--line) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    var(--surface-2);
+}
+
+.wire-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wire-cell {
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.block {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.block__box {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: var(--line);
+}
+
+.block__lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.block__line {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.block__line--short {
+  width: 60%;
+}

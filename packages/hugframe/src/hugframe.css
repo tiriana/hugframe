@@ -32,7 +32,9 @@
     }
   }
 
-  .hug-root[data-mode='expanded'] {
+  .hug-root[data-mode='expanded'],
+  .hug-root[data-phase='expanding'],
+  .hug-root[data-phase='collapsing'] {
     z-index: var(--hug-z-index);
   }
 
@@ -65,7 +67,7 @@
     height: var(--hug-initial-height, 240px);
     overflow: hidden;
     background: var(--hug-surface);
-    border-radius: 14px;
+    border-radius: 0;
     box-shadow: inset 0 0 0 1px var(--hug-line);
     transition:
       height 260ms cubic-bezier(0.33, 1, 0.68, 1),

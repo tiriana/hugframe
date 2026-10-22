@@ -16,6 +16,7 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
+  --frame-radius: 14px;
 
   --font-body:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -45,3 +46,8 @@
     --shadow-md: 0 1px 2px rgb(0 0 0 / 45%), 0 20px 44px -24px rgb(0 0 0 / 70%);
   }
 }
+
+:where(.hug-root:not([data-mode='expanded'])) .hug-box {
+  border-radius: var(--frame-radius);
+}
+/* The library frame is square; round the inline box without outranking a recipe. */

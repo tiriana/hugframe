@@ -10,6 +10,7 @@ await mkdir(pages, { recursive: true })
 
 await cp(resolve(root, '.demo-dist'), pages, { recursive: true })
 await cp(resolve(root, '.api-docs'), resolve(pages, 'api'), { recursive: true })
+await cp(resolve(root, '.react-docs'), resolve(pages, 'react'), { recursive: true })
 
 // without this, Pages runs Jekyll over the branch and drops files it does not understand
 await writeFile(resolve(pages, '.nojekyll'), '')

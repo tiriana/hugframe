@@ -37,23 +37,32 @@ const snap = () =>
       childOverflowY: de ? win.getComputedStyle(de).overflowY : null,
       childArrangement: (() => {
         if (!d) return null
-        const list = d.querySelector('.list-col')
-        const conversation = d.querySelector('.conversation')
-        if (!list || !conversation) return 'no-conversation'
+        const framePanel = d.querySelector('.panel--frame')
+        const contentPanel = d.querySelector('.panel--content')
+        if (!framePanel || !contentPanel) return 'no-split'
         return Math.abs(
-          list.getBoundingClientRect().top - conversation.getBoundingClientRect().top,
+          framePanel.getBoundingClientRect().top - contentPanel.getBoundingClientRect().top,
         ) < 4
           ? 'side-by-side'
           : 'stacked'
-      })(),
-      childWorkspaceDisplay: (() => {
-        const w = d && win ? d.querySelector('.workspace') : null
-        return w ? win.getComputedStyle(w).display : null
       })(),
       overflowPx: de ? de.scrollHeight - de.clientHeight : null,
       gutter: de ? win.innerWidth - de.clientWidth : null,
       boxZ: box ? getComputedStyle(box).zIndex : null,
       backdropZ: root ? getComputedStyle(root.querySelector('.hug-backdrop')).zIndex : null,
+      panel: (() => {
+        const hostFrame = document.querySelector('.frame-panel')
+        const side = document.querySelector('.side-panel')
+        if (!hostFrame || !side) return null
+        const f = hostFrame.getBoundingClientRect()
+        const s = side.getBoundingClientRect()
+        return {
+          frame: { top: +f.top.toFixed(1), left: +f.left.toFixed(1), width: +f.width.toFixed(1) },
+          side: { top: +s.top.toFixed(1), left: +s.left.toFixed(1), width: +s.width.toFixed(1) },
+          sideOpacity: getComputedStyle(side).opacity,
+          stacked: s.top >= f.bottom - 1,
+        }
+      })(),
     }
   })
 
@@ -65,17 +74,11 @@ const click = async (re) => {
   await btn(re).click()
 }
 
-// ---- A. host layout change: 1 column -> 3 columns ----
-await page
-  .frameLocator('iframe[title="Threads workspace"]')
-  .locator('button.thread')
-  .first()
-  .click()
-await page.waitForTimeout(500)
-await click(/^1 col/i)
+// ---- A. host layout change: 1/3 width -> full width ----
+await click(/^1\/3/)
 await page.waitForTimeout(900)
 const wide = await snap()
-await click(/^3 col/i)
+await click(/^full/i)
 const switching = []
 const t0 = Date.now()
 for (let i = 0; i < 70; i++) {
@@ -92,9 +95,9 @@ const unclipped = switching.filter((s) => s.childOverflowY !== 'hidden' || (s.gu
 const morphPhases = switching.filter((s) => s.phase === 'expanding' || s.phase === 'collapsing')
 
 check(
-  'layout: spanning 3 columns widens the frame',
+  'layout: the full width widens the frame',
   narrow.frameW > wide.frameW + 100,
-  `1col=${wide.frameW} 3col=${narrow.frameW}`,
+  `1/3=${wide.frameW} full=${narrow.frameW}`,
 )
 check(
   'layout: a resize phase is announced',
@@ -110,12 +113,29 @@ check('layout: settles back to idle', narrow.phase === 'idle', `phase=${narrow.p
 check(
   'layout: the wider frame needs less height',
   narrow.frameH < wide.frameH - 40,
-  `1col=${wide.frameH} 3col=${narrow.frameH}`,
+  `1/3=${wide.frameH} full=${narrow.frameH}`,
+)
+check(
+  'layout: the side panel sits beside the frame at 1/3',
+  wide.panel?.stacked === false && Math.abs(wide.panel.side.top - wide.panel.frame.top) <= 1,
+  JSON.stringify(wide.panel),
+)
+check(
+  'layout: full stacks the side panel under the frame',
+  narrow.panel?.stacked === true &&
+    Math.abs(narrow.panel.side.width - narrow.panel.frame.width) <= 1 &&
+    Math.abs(narrow.panel.side.left - narrow.panel.frame.left) <= 1,
+  JSON.stringify(narrow.panel),
+)
+check(
+  'layout: the stacked side panel stays visible',
+  narrow.panel?.sideOpacity === '1',
+  `opacity=${narrow.panel?.sideOpacity}`,
 )
 check(
   'layout: the framed app reflows with its container',
   wide.childArrangement === 'stacked' && narrow.childArrangement === 'side-by-side',
-  `1col=${wide.childArrangement} 3col=${narrow.childArrangement} displays=${wide.childWorkspaceDisplay}/${narrow.childWorkspaceDisplay}`,
+  `1/3=${wide.childArrangement} full=${narrow.childArrangement}`,
 )
 check(
   'layout: no overflow window beyond two frames',
@@ -165,7 +185,7 @@ check(
   (fixed.childScrollH ?? 0) > (fixed.childClientH ?? 0),
   `scroll=${fixed.childScrollH} client=${fixed.childClientH}`,
 )
-await click(/add a thread/i)
+await click(/grow the content/i)
 await page.waitForTimeout(900)
 const fixedAfterGrowth = await snap()
 check(
@@ -174,7 +194,11 @@ check(
   `before=${fixed.boxH} after=${fixedAfterGrowth.boxH}`,
 )
 
-// ---- C. collapse affordance variants ----
+// ---- C. expanded frame: the built-in handle and the stacking order ----
+// The demo no longer offers a row to pick the collapse affordance: the library only
+// renders the control while expanded, so the row could not be reached behind the
+// overlay. The affordance variants are exercised through the playground's
+// #pg-affordance instead (see verify-playground.mjs).
 await click(/^expand$/i)
 await page.waitForTimeout(900)
 const defaultAffordance = await page.evaluate(() => {
@@ -201,45 +225,6 @@ check(
 )
 await page.keyboard.press('Escape')
 await page.waitForTimeout(900)
-
-await click(/custom icon/i)
-await page.waitForTimeout(300)
-await click(/^expand$/i)
-await page.waitForTimeout(900)
-const customAffordance = await page.evaluate(() => {
-  const b = document.querySelector('.hug-collapse')
-  return b
-    ? { exists: true, label: b.getAttribute('aria-label'), html: b.innerHTML.length }
-    : { exists: false }
-})
-check(
-  'affordance: custom icon replaces the glyph but keeps the button',
-  customAffordance.exists &&
-    customAffordance.label === 'Return to inline view' &&
-    customAffordance.html !== defaultAffordance.html,
-  JSON.stringify(customAffordance),
-)
-await page.keyboard.press('Escape')
-await page.waitForTimeout(900)
-
-await click(/^hidden/i)
-await page.waitForTimeout(300)
-await click(/^expand$/i)
-await page.waitForTimeout(900)
-const hiddenAffordance = await page.evaluate(() => ({
-  exists: !!document.querySelector('.hug-collapse'),
-  mode: document.querySelector('.hug-root')?.getAttribute('data-mode'),
-}))
-check(
-  'affordance: null hides the built-in control while staying expanded',
-  hiddenAffordance.exists === false && hiddenAffordance.mode === 'expanded',
-  JSON.stringify(hiddenAffordance),
-)
-await page.keyboard.press('Escape')
-await page.waitForTimeout(900)
-
-await click(/^default/i)
-await page.waitForTimeout(300)
 
 // ---- D. token override ----
 await page.addStyleTag({ content: '.hug-root { --hug-z-index: 4242; }' })
@@ -273,15 +258,9 @@ const rmSnap = () =>
       childRect: de ? +de.getBoundingClientRect().height.toFixed(1) : null,
     }
   })
-await rmPage
-  .getByRole('button', { name: /^1 col/i })
-  .first()
-  .click()
+await rmPage.getByRole('button', { name: /^1\/3/ }).first().click()
 await rmPage.waitForTimeout(600)
-await rmPage
-  .getByRole('button', { name: /^3 col/i })
-  .first()
-  .click()
+await rmPage.getByRole('button', { name: /^full/i }).first().click()
 const rmPhases = new Set()
 for (let i = 0; i < 25; i++) {
   rmPhases.add((await rmSnap()).phase)

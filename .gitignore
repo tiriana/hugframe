@@ -35,6 +35,7 @@ htmlcov/
 # Pages site output
 .pages/
 .api-docs/
+.react-docs/
 
 # End-to-end run artifacts
 apps/site/test/e2e/.artifacts/
