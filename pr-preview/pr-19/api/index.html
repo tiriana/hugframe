@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="API reference for hugframe: an iframe that hugs its content, then morphs into a chromeless full-window view."
+    />
+    <title>hugframe API reference</title>
+    <link rel="icon" href="../favicon.svg" />
+    <style>
+      :root {
+  color-scheme: light dark;
+
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #efece6;
+  --text: #1a1a17;
+  --muted: #67665f;
+  --line: #e1ddd4;
+  --accent: #4b46e0;
+  --accent-ink: #ffffff;
+  --ok: #0f7b6c;
+  --warn: #a15c00;
+  --danger: #c0392b;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --font-body:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --shadow-sm: 0 1px 2px rgb(20 20 18 / 6%);
+  --shadow-md: 0 1px 2px rgb(20 20 18 / 6%), 0 16px 36px -20px rgb(20 20 18 / 28%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111214;
+    --surface: #191b1f;
+    --surface-2: #22252b;
+    --text: #ececea;
+    --muted: #9b9c98;
+    --line: #2c2f36;
+    --accent: #9b94ff;
+    --accent-ink: #12131a;
+    --ok: #4ecdb6;
+    --warn: #e0a34a;
+    --danger: #ef8175;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 45%), 0 20px 44px -24px rgb(0 0 0 / 70%);
+  }
+}
+
+/* The shared shell: the background and texture, the type, the header, the footer and the
+   navigation behaviour. The demo loads this file through its entry module and the API page
+   has it inlined by scripts/build-docs.mjs. It reads the palette and font tokens declared
+   in src/demo/theme.css; it declares no colours or type of its own. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --measure: 940px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(rgb(120 116 100 / 10%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14px 24px 13px;
+}
+
+.masthead__brand {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.masthead__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.masthead__nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__nav a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.masthead__nav a[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__util {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.masthead__util a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.masthead__github {
+  width: 44px;
+}
+
+.masthead__npm {
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.masthead__util a:hover {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.masthead__brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.masthead__nav a:focus-visible,
+.masthead__util a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.footer {
+  border-top: 1px solid var(--line);
+}
+
+.footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 22px 24px 44px;
+}
+
+.footer__note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.footer__nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer__nav a:hover {
+  color: var(--text);
+}
+
+.footer__nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 560px) {
+  .masthead__inner {
+    padding: 12px 18px 11px;
+  }
+
+  .masthead__util {
+    order: 2;
+  }
+
+  .masthead__nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .footer__inner {
+    padding: 18px 18px 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masthead__nav a,
+  .masthead__util a {
+    transition: none;
+  }
+}
+
+/* Reading styles for the API page only. The shell — background, texture, type, header,
+   footer and navigation — comes from src/site/site.css, and the palette and font tokens
+   from src/demo/theme.css; both are inlined by scripts/build-docs.mjs. Nothing here
+   re-declares a colour, a font or a shell dimension. */
+
+/* The reading column is centred by the outer grid; the contents nav lives in the page's
+   own margin, so it never takes width from the column. Below the breakpoint the grid
+   collapses and the nav becomes a <details> block above the article. */
+.docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
+  column-gap: 24px;
+  align-items: start;
+  padding: 40px 24px 104px;
+}
+
+.page {
+  grid-column: 2;
+  min-width: 0;
+  max-width: var(--measure);
+  margin: 0 auto;
+  line-height: 1.62;
+}
+
+.toc {
+  grid-column: 1;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  justify-self: end;
+  width: min(196px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.toc__summary {
+  display: none;
+}
+
+.toc__list,
+.toc__sub {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc__list a {
+  display: block;
+  padding: 4px 9px;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  text-decoration: none;
+  overflow-wrap: break-word;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.toc__list a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* The current section carries a bar, a weight change and a tint, so it is not colour alone. */
+.toc__list a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.toc__list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.toc__sub {
+  padding-left: 12px;
+}
+
+.toc__list a code {
+  font-size: 0.82em;
+}
+
+.toc__sub a {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-size: 11.5px;
+}
+
+.page h1 {
+  margin: 0 0 0.55em;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(28px, 4.4vw, 38px);
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+}
+
+.page h2 {
+  margin: 2.6em 0 0.9em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.page h3 {
+  margin: 2em 0 0.65em;
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.page p {
+  margin: 0 0 1.05em;
+}
+
+.page ul,
+.page ol {
+  margin: 0 0 1.2em;
+  padding-left: 1.5em;
+}
+
+.page li {
+  margin-top: 0.35em;
+}
+
+.page li::marker {
+  color: var(--muted);
+}
+
+.page strong {
+  font-weight: 600;
+}
+
+.page p,
+.page li,
+.page th,
+.page td {
+  overflow-wrap: break-word;
+}
+
+.page a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.page a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.page a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.page :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Section headings carry the API name in backticks; a chip there would read as a block,
+   so headings keep the symbol in mono and drop the surface. */
+.page :is(h1, h2, h3) code {
+  padding: 0;
+  background: none;
+  font-size: 0.82em;
+  letter-spacing: -0.01em;
+}
+
+.page pre {
+  margin: 1.4em 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.page pre code {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.page table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.page th,
+.page td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.page th {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.page tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.page pre:focus-visible,
+.page table:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.page :is(h2, h3)[id] {
+  scroll-margin-top: 24px;
+}
+
+@media (max-width: 1399px) {
+  .docs {
+    display: block;
+  }
+
+  .toc {
+    position: static;
+    grid-column: auto;
+    justify-self: normal;
+    width: auto;
+    max-height: none;
+    margin-bottom: 28px;
+    overflow: visible;
+  }
+
+  .toc__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc__summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 160ms ease;
+  }
+
+  .toc__panel[open] .toc__summary::after {
+    transform: rotate(-135deg) translateY(-1px);
+  }
+
+  .toc__summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toc__panel[open] .toc__list {
+    margin-top: 8px;
+  }
+
+  .toc__list a {
+    padding: 7px 12px;
+  }
+}
+
+@media (max-width: 620px) {
+  .docs {
+    padding: 32px 18px 80px;
+  }
+
+  .page h1 {
+    margin-bottom: 0.5em;
+  }
+
+  .page h2 {
+    margin-top: 2.2em;
+  }
+
+  .page pre {
+    padding: 14px 15px;
+  }
+
+  .page th,
+  .page td {
+    padding: 9px 12px;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <!-- The one copy of the site header and footer. The demo mounts it through a Vite ?raw
+     import, and scripts/build-docs.mjs inlines it into the API page. The ../, ./
+     and {{*-current}} tokens are the only parts that differ between the two pages; nothing
+     else here is templated. The footer is split off at the marker comment below. -->
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="masthead__brand" href="../">hugframe</a>
+    <nav class="masthead__nav" aria-label="Site sections">
+      <a href="../" >Demo</a>
+      <a href="../playground/">Playground</a>
+      <a href="./"  aria-current="page">API reference</a>
+    </nav>
+    <div class="masthead__util">
+      <a
+        class="masthead__github"
+        href="https://github.com/tiriana/hugframe"
+        aria-label="hugframe on GitHub"
+        title="hugframe on GitHub"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg
+          viewBox="0 0 16 16"
+          width="18"
+          height="18"
+          fill="currentColor"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"
+          />
+        </svg>
+      </a>
+      <a
+        class="masthead__npm"
+        href="https://www.npmjs.com/package/hugframe"
+        aria-label="hugframe on npm"
+        title="hugframe on npm"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        npm
+      </a>
+    </div>
+  </div>
+</header>
+    <main class="docs">
+      <nav class="toc" aria-label="On this page">
+        <details class="toc__panel" open>
+          <summary class="toc__summary">On this page</summary>
+          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
+        </details>
+      </nav>
+      <article class="page"><h1 id="hugframe-api-reference">hugframe API reference</h1>
+<p>The complete public surface of <code>hugframe</code>. For a quick start, see the <a href="https://github.com/tiriana/hugframe#readme">README</a>.</p>
+<p>Everything here is framework-free: plain TypeScript over DOM APIs, no runtime dependencies. The package
+is ESM-only and browser-only, and it imports nothing.</p>
+<h2 id="package-entry-points">Package entry points</h2>
+<ol>
+<li><code>hugframe</code> — the engine, the <code>&lt;hug-frame&gt;</code> element, the protocol guards and the types.</li>
+<li><code>hugframe/child</code> — the runtime that runs <em>inside</em> the framed document.</li>
+<li><code>hugframe/css</code> — the stylesheet, imported once by the host page.</li>
+</ol>
+<pre><code class="language-js">import { createHugFrame } from &#39;hugframe&#39;
+import &#39;hugframe/css&#39;
+</code></pre>
+<p>Importing <code>hugframe</code> also registers <code>&lt;hug-frame&gt;</code>, so importing it for the element alone is a legitimate
+side effect and the package is not marked side-effect free.</p>
+<h2 id="createhugframe-options">createHugFrame(options)</h2>
+<p>Creates a frame inside <code>container</code> and returns an instance.</p>
+<pre><code class="language-ts">function createHugFrame(options: HugFrameOptions): HugFrameInstance
+</code></pre>
+<h3 id="options">Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>container</code></td>
+<td><code>HTMLElement</code></td>
+<td>—</td>
+<td>Required. The engine renders its own tree into this element.</td>
+</tr>
+<tr>
+<td><code>src</code></td>
+<td><code>string</code></td>
+<td>—</td>
+<td>Required. The framed document.</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>string</code></td>
+<td>—</td>
+<td>Required. Labels the iframe, and names the dialog when expanded.</td>
+</tr>
+<tr>
+<td><code>targetOrigin</code></td>
+<td><code>string</code></td>
+<td>current origin</td>
+<td>Origin expected from the framed document. <code>&#39;*&#39;</code> skips the origin check; the message still has to come from the frame&#39;s own window.</td>
+</tr>
+<tr>
+<td><code>initialMode</code></td>
+<td><code>&#39;inline&#39; | &#39;expanded&#39;</code></td>
+<td><code>&#39;inline&#39;</code></td>
+<td>The engine owns its mode; a host changes it with <code>expand()</code> / <code>collapse()</code>.</td>
+</tr>
+<tr>
+<td><code>height</code></td>
+<td><code>&#39;content&#39; | number | string</code></td>
+<td><code>&#39;content&#39;</code></td>
+<td><code>&#39;content&#39;</code> hugs the framed document; a number is px; any other string is used verbatim, so <code>&#39;60vh&#39;</code> and <code>&#39;clamp(280px, 45vh, 460px)&#39;</code> both work. Inline only — expanded always fills.</td>
+</tr>
+<tr>
+<td><code>minHeight</code></td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td>Inline-mode floor, px.</td>
+</tr>
+<tr>
+<td><code>maxHeight</code></td>
+<td><code>number</code></td>
+<td><code>720</code></td>
+<td>Inline-mode ceiling, px.</td>
+</tr>
+<tr>
+<td><code>initialHeight</code></td>
+<td><code>number</code></td>
+<td><code>240</code></td>
+<td>Inline-mode height before the framed document first reports.</td>
+</tr>
+<tr>
+<td><code>collapseIcon</code></td>
+<td><code>Node | string</code></td>
+<td>a built-in glyph</td>
+<td>Replaces the glyph inside the default expanded-mode control.</td>
+</tr>
+<tr>
+<td><code>renderCollapse</code></td>
+<td><code>((handle: HugFrameCollapseHandle) =&gt; Node) | null</code></td>
+<td>—</td>
+<td>Replaces the whole expanded-mode control. Receives <code>{ collapse }</code>. <code>null</code> hides it, which is how you drive collapsing from your own chrome.</td>
+</tr>
+<tr>
+<td><code>className</code></td>
+<td><code>string</code></td>
+<td>—</td>
+<td>Added to the root element, so <code>--hug-*</code> tokens set here win.</td>
+</tr>
+<tr>
+<td><code>style</code></td>
+<td><code>Partial&lt;CSSStyleDeclaration&gt;</code></td>
+<td>—</td>
+<td>Applied to the root element.</td>
+</tr>
+<tr>
+<td><code>iframeProps</code></td>
+<td><code>Record&lt;string, string | number | boolean | null | undefined&gt;</code></td>
+<td>—</td>
+<td>Attributes applied to the created iframe.</td>
+</tr>
+<tr>
+<td><code>resizeSettleMs</code></td>
+<td><code>number</code></td>
+<td><code>120</code></td>
+<td>Width quiescence, ms, the <code>resizing</code> phase waits for before settling onto the newly reported height.</td>
+</tr>
+<tr>
+<td><code>resizeSafetyMs</code></td>
+<td><code>number</code></td>
+<td><code>400</code></td>
+<td>Ceiling, ms, on that wait.</td>
+</tr>
+<tr>
+<td><code>resizeWidthEpsilon</code></td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>Width change, px, at or below which a layout change is not treated as a resize.</td>
+</tr>
+<tr>
+<td><code>morphSettleMarginMs</code></td>
+<td><code>number</code></td>
+<td><code>90</code></td>
+<td>Margin, ms, added to the morph duration for the <code>transitionend</code> fallback timer.</td>
+</tr>
+<tr>
+<td><code>expandedWidth</code></td>
+<td><code>string</code></td>
+<td><code>&#39;100vw&#39;</code></td>
+<td>Width written on the box once expanded.</td>
+</tr>
+<tr>
+<td><code>expandedHeight</code></td>
+<td><code>string</code></td>
+<td><code>&#39;100dvh&#39;</code></td>
+<td>Height written on the box once expanded.</td>
+</tr>
+<tr>
+<td><code>lockScroll</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Ref-counted document scroll lock while expanded.</td>
+</tr>
+<tr>
+<td><code>manageFocus</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Move focus into the framed document on expand and return it to the previously focused element on collapse.</td>
+</tr>
+<tr>
+<td><code>collapseOnEscape</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td><code>Escape</code> in the host document collapses the frame. A framed document that handles <code>Escape</code> itself and calls <code>requestCollapse()</code> is making an explicit request rather than pressing this shortcut, so it is honoured either way.</td>
+</tr>
+<tr>
+<td><code>onModeChange</code></td>
+<td><code>(mode: HugFrameMode) =&gt; void</code></td>
+<td>—</td>
+<td>Fires on every mode change, including ones the framed document requested.</td>
+</tr>
+<tr>
+<td><code>onPhaseChange</code></td>
+<td><code>(phase: HugFramePhase) =&gt; void</code></td>
+<td>—</td>
+<td>Fires on phase transitions only, not on every frame.</td>
+</tr>
+<tr>
+<td><code>onSizingChange</code></td>
+<td><code>(sizing: HugFrameSizing) =&gt; void</code></td>
+<td>—</td>
+<td>Fires when the sizing mode actually changes.</td>
+</tr>
+<tr>
+<td><code>onReady</code></td>
+<td><code>() =&gt; void</code></td>
+<td>—</td>
+<td>The framed document has loaded and announced itself with <code>ready</code>.</td>
+</tr>
+<tr>
+<td><code>onRequestClose</code></td>
+<td><code>() =&gt; void</code></td>
+<td>—</td>
+<td>The framed document asked to be closed. Unmounting is the host&#39;s decision; the engine never removes itself.</td>
+</tr>
+<tr>
+<td><code>onMessage</code></td>
+<td><code>(payload: unknown) =&gt; void</code></td>
+<td>—</td>
+<td>Arbitrary payload sent from the framed document with <code>sendMessage()</code>.</td>
+</tr>
+</tbody></table>
+<h3 id="instance">Instance</h3>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>element</code></td>
+<td><code>HTMLElement</code> (read-only)</td>
+<td>The root the engine rendered.</td>
+</tr>
+<tr>
+<td><code>expand()</code></td>
+<td><code>void</code></td>
+<td>Morphs to the full-window view.</td>
+</tr>
+<tr>
+<td><code>collapse()</code></td>
+<td><code>void</code></td>
+<td>Returns to the inline slot.</td>
+</tr>
+<tr>
+<td><code>toggle()</code></td>
+<td><code>void</code></td>
+<td>Whichever of the two applies.</td>
+</tr>
+<tr>
+<td><code>sendMessage(payload)</code></td>
+<td><code>void</code></td>
+<td>Posts a <code>custom</code> message to the framed document.</td>
+</tr>
+<tr>
+<td><code>update(next)</code></td>
+<td><code>void</code></td>
+<td>Merges the options and re-applies what depends on them, without remounting the frame. Options read at use time — <code>targetOrigin</code>, the <code>on*</code> callbacks, <code>resizeSettleMs</code>, <code>resizeSafetyMs</code>, <code>resizeWidthEpsilon</code> and <code>morphSettleMarginMs</code> — take effect immediately; <code>src</code>, <code>title</code>, <code>height</code>, <code>minHeight</code>, <code>maxHeight</code>, <code>initialHeight</code>, <code>collapseIcon</code>, <code>renderCollapse</code>, <code>className</code>, <code>style</code> and <code>iframeProps</code> are applied to the live frame; <code>lockScroll</code> and <code>collapseOnEscape</code> re-apply their live state, <code>expandedWidth</code> and <code>expandedHeight</code> re-render the expanded box when it is idle, and <code>initialMode</code> requests a mode change.</td>
+</tr>
+<tr>
+<td><code>getIframe()</code></td>
+<td><code>HTMLIFrameElement | null</code></td>
+<td>The one iframe for the component&#39;s lifetime. It is never remounted.</td>
+</tr>
+<tr>
+<td><code>getMode()</code></td>
+<td><code>&#39;inline&#39; | &#39;expanded&#39;</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>getPhase()</code></td>
+<td><code>&#39;idle&#39; | &#39;expanding&#39; | &#39;collapsing&#39; | &#39;resizing&#39;</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>getSizing()</code></td>
+<td><code>&#39;content&#39; | &#39;fixed&#39;</code></td>
+<td>Which of the two is driving the height.</td>
+</tr>
+<tr>
+<td><code>getZIndex()</code></td>
+<td><code>number</code></td>
+<td>The effective <code>--hug-z-index</code> on the expanded frame, so a host can layer above it with <code>getZIndex() + 1</code>.</td>
+</tr>
+<tr>
+<td><code>destroy()</code></td>
+<td><code>void</code></td>
+<td>Detaches every listener, observer and timer, releases the scroll lock, and removes the rendered tree.</td>
+</tr>
+</tbody></table>
+<h3 id="events">Events</h3>
+<p>Dispatched on the root element with <code>bubbles: false</code>, so listen on <code>instance.element</code> rather than on an ancestor.</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th><code>detail</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hugframe:modechange</code></td>
+<td><code>{ mode }</code></td>
+</tr>
+<tr>
+<td><code>hugframe:phasechange</code></td>
+<td><code>{ phase }</code></td>
+</tr>
+<tr>
+<td><code>hugframe:sizingchange</code></td>
+<td><code>{ sizing }</code></td>
+</tr>
+<tr>
+<td><code>hugframe:ready</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>hugframe:requestclose</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>hugframe:message</code></td>
+<td><code>{ payload }</code></td>
+</tr>
+</tbody></table>
+<h3 id="phases">Phases</h3>
+<p><code>idle</code> is the resting state. <code>expanding</code> and <code>collapsing</code> are the morph. <code>resizing</code> is entered when the
+embedding layout changes the frame&#39;s width underneath it — the engine suspends content chasing, holds the
+height so the framed document clips rather than jumps, and settles onto the newly reported height after
+120ms of width quiescence, or 400ms at the latest. Both waits are configurable with <code>resizeSettleMs</code> and
+<code>resizeSafetyMs</code>. With <code>prefers-reduced-motion: reduce</code> the phase is skipped entirely and heights are
+applied instantly.</p>
+<h2 id="hug-frame"><code>&lt;hug-frame&gt;</code></h2>
+<p>The same engine as an element. Register it by importing the package.</p>
+<pre><code class="language-html">&lt;hug-frame src=&quot;/embedded.html&quot; title=&quot;Embedded app&quot; height=&quot;content&quot;&gt;&lt;/hug-frame&gt;
+&lt;script type=&quot;module&quot;&gt;
+  import &#39;hugframe&#39;
+
+  const el = document.querySelector(&#39;hug-frame&#39;)
+  el.expand()
+&lt;/script&gt;
+</code></pre>
+<h3 id="attributes">Attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>src</code></td>
+<td>The framed document.</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>Labels the iframe and names the dialog when expanded.</td>
+</tr>
+<tr>
+<td><code>target-origin</code></td>
+<td>Origin expected from the framed document.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>Read and write: <code>inline</code> or <code>expanded</code>. Reflects the live mode.</td>
+</tr>
+<tr>
+<td><code>height</code></td>
+<td><code>content</code>, or a CSS length. A bare number is read as px.</td>
+</tr>
+<tr>
+<td><code>min-height</code></td>
+<td>Inline-mode floor, px.</td>
+</tr>
+<tr>
+<td><code>max-height</code></td>
+<td>Inline-mode ceiling, px.</td>
+</tr>
+<tr>
+<td><code>initial-height</code></td>
+<td>Inline-mode height before the first report, px.</td>
+</tr>
+<tr>
+<td><code>resize-settle-ms</code></td>
+<td>Resizing settle delay, ms.</td>
+</tr>
+<tr>
+<td><code>resize-safety-ms</code></td>
+<td>Resizing safety ceiling, ms.</td>
+</tr>
+<tr>
+<td><code>resize-width-epsilon</code></td>
+<td>Width deadband for treating a layout change as a resize, px.</td>
+</tr>
+<tr>
+<td><code>morph-settle-margin-ms</code></td>
+<td>Fallback margin added to the morph duration, ms.</td>
+</tr>
+<tr>
+<td><code>expanded-width</code></td>
+<td>Width written on the box once expanded.</td>
+</tr>
+<tr>
+<td><code>expanded-height</code></td>
+<td>Height written on the box once expanded.</td>
+</tr>
+</tbody></table>
+<h3 id="properties">Properties</h3>
+<p><code>collapseIcon</code> (<code>Node | string</code>), <code>renderCollapse</code> (<code>((handle) =&gt; Node) | null</code>) and <code>iframeProps</code> — the
+options that cannot be expressed as attributes. There is deliberately no <code>collapse-icon</code> attribute: a glyph
+is a <code>Node</code> or a string, and the element takes it as a property.</p>
+<p>The behaviour switches <code>lockScroll</code>, <code>manageFocus</code> and <code>collapseOnEscape</code> are properties too, defaulting to
+<code>true</code>. A boolean attribute&#39;s absence-versus-<code>false</code> semantics is a trap, so there are no corresponding
+attributes. Every numeric and string knob above — <code>resizeSettleMs</code>, <code>resizeSafetyMs</code>, <code>resizeWidthEpsilon</code>,
+<code>morphSettleMarginMs</code>, <code>expandedWidth</code> and <code>expandedHeight</code> — is attribute-backed and also readable and
+writable as a property of the same name.</p>
+<h3 id="methods">Methods</h3>
+<p>The instance methods above, plus <code>destroy()</code>. <code>connectedCallback</code> creates the engine and
+<code>disconnectedCallback</code> tears it down, but teardown is deferred by a microtask so that moving the element
+within the DOM relocates it instead of rebuilding it.</p>
+<h2 id="createhugframechild-options">createHugFrameChild(options)</h2>
+<p>Import from the <code>hugframe/child</code> subpath, and call it inside the framed document.</p>
+<pre><code class="language-ts">function createHugFrameChild(options?: HugFrameChildOptions): HugFrameChild
+function getHugFrameChild(): HugFrameChild | undefined
+</code></pre>
+<h3 id="options-1">Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>targetOrigin</code></td>
+<td><code>string</code></td>
+<td><code>&#39;*&#39;</code></td>
+<td>Origin expected from the host. The parent window is required whatever this is.</td>
+</tr>
+<tr>
+<td><code>sizeSelector</code></td>
+<td><code>string</code></td>
+<td><code>document.documentElement</code></td>
+<td>Element whose box height drives the frame.</td>
+</tr>
+<tr>
+<td><code>offsetHeight</code></td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td>Constant px added to every reported height.</td>
+</tr>
+<tr>
+<td><code>reportEpsilon</code></td>
+<td><code>number</code></td>
+<td><code>0.5</code></td>
+<td>Px deadband below which a measured size change is not reported.</td>
+</tr>
+<tr>
+<td><code>onMessage</code></td>
+<td><code>(payload: unknown) =&gt; void</code></td>
+<td>—</td>
+<td>Arbitrary payload sent from the host.</td>
+</tr>
+<tr>
+<td><code>onModeChange</code></td>
+<td><code>(mode: HugFrameMode) =&gt; void</code></td>
+<td>—</td>
+<td>The host entered <code>inline</code> or <code>expanded</code>.</td>
+</tr>
+<tr>
+<td><code>onSizingChange</code></td>
+<td><code>(sizing: HugFrameSizing) =&gt; void</code></td>
+<td>—</td>
+<td>The host started driving the height, or went back to content.</td>
+</tr>
+</tbody></table>
+<p><code>targetOrigin</code> defaults differently on the two sides: the host defaults to its own origin, because it knows
+where it serves its framed document from, while the framed document defaults to <code>&#39;*&#39;</code>, because it cannot
+know which host embedded it. The wildcard relaxes the origin check only — the framed document always
+requires <code>event.source</code> to be its parent window.</p>
+<h3 id="instance-1">Instance</h3>
+<p><code>isFramed</code>, <code>mode</code> and <code>sizing</code> are read-only. Methods: <code>resize()</code>, <code>suspend()</code>, <code>resume()</code>,
+<code>requestExpand()</code>, <code>requestCollapse()</code>, <code>requestClose()</code>, <code>sendMessage(payload)</code>, <code>destroy()</code>.</p>
+<p>The runtime is a safe no-op when the document is opened outside a frame, so a framed app can also be
+previewed directly. It warns once through <code>console.warn</code> when two consecutive size reports equal the
+frame&#39;s own height, the signature of a document laid out at <code>height: 100vh</code>.</p>
+<h3 id="attributes-the-runtime-writes">Attributes the runtime writes</h3>
+<p><code>data-hug-sizing</code> — <code>content</code> or <code>fixed</code> — on the framed document&#39;s root element, for the framed
+document&#39;s own CSS. Keying <code>overflow</code> off <code>data-hug-sizing=&quot;fixed&quot;</code> is what lets a host-driven height
+scroll internally, while content sizing clips the single frame between content growth and the height
+report arriving.</p>
+<h2 id="the-wire-protocol">The wire protocol</h2>
+<p>Every message is a plain JSON-serializable object carrying <code>source: &#39;hugframe&#39;</code>, and every message is
+validated by an exported guard.</p>
+<h3 id="framed-document-to-host">Framed document to host</h3>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Shape</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ready</code></td>
+<td><code>{ source, type: &#39;ready&#39; }</code></td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td><code>{ source, type: &#39;size&#39;, height: number, width: number }</code></td>
+</tr>
+<tr>
+<td><code>request</code></td>
+<td><code>{ source, type: &#39;request&#39;, action: &#39;expand&#39; | &#39;collapse&#39; | &#39;close&#39; }</code></td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td><code>{ source, type: &#39;custom&#39;, payload: unknown }</code></td>
+</tr>
+</tbody></table>
+<h3 id="host-to-framed-document">Host to framed document</h3>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Shape</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mode</code></td>
+<td><code>{ source, type: &#39;mode&#39;, mode: &#39;inline&#39; | &#39;expanded&#39; }</code></td>
+</tr>
+<tr>
+<td><code>sizing</code></td>
+<td><code>{ source, type: &#39;sizing&#39;, sizing: &#39;content&#39; | &#39;fixed&#39; }</code></td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td><code>{ source, type: &#39;custom&#39;, payload: unknown }</code></td>
+</tr>
+</tbody></table>
+<h3 id="exported-helpers">Exported helpers</h3>
+<p><code>HUGFRAME_SOURCE</code> (the string <code>&#39;hugframe&#39;</code>), <code>HUGFRAME_Z_INDEX</code>, <code>isHugFrameChildMessage(value)</code>,
+<code>isHugFrameParentMessage(value)</code> and <code>postHugFrameMessage(target, message, targetOrigin)</code>.</p>
+<p>Two checks matter and both are enforced. The host verifies that <code>event.source</code> is the frame&#39;s own
+<code>contentWindow</code> as well as the origin, and the framed document verifies that <code>event.source</code> is its parent
+window as well as the origin. The parent check holds even when <code>targetOrigin</code> is <code>&#39;*&#39;</code>, so the wildcard
+widens which origins are accepted, not which windows. Trusting the <code>source</code> field inside the payload alone
+would be a security regression.</p>
+<h2 id="appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</h2>
+<p>The appearance API is three things: the four colour custom properties, the three
+engine-coupled custom properties, and the stable <code>data-hug-part</code> hooks on every
+element the engine generates. Every other visual value is a plain literal in the
+rule that already used it, and the whole stylesheet is wrapped in
+<code>@layer hugframe</code>.</p>
+<h3 id="custom-properties">Custom properties</h3>
+<p>Set them on the root element — directly, or through <code>className</code>/<code>style</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Default</th>
+<th>Kept because</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>--hug-z-index</code></td>
+<td><code>1000000000</code></td>
+<td>The engine reads it in <code>getZIndex()</code>, and the exported <code>HUGFRAME_Z_INDEX</code> must match it. Kept to few significant digits deliberately: CSS minifiers, including the Lightning CSS that Vite builds with, round longer numeric literals, which would silently disagree with the export.</td>
+</tr>
+<tr>
+<td><code>--hug-initial-height</code></td>
+<td><code>240px</code></td>
+<td>The engine writes it on every height update, before the framed document first reports.</td>
+</tr>
+<tr>
+<td><code>--hug-duration</code></td>
+<td><code>460ms</code></td>
+<td>The engine reads it to size the morph&#39;s <code>transitionend</code> fallback, and the morph transitions read it too, so one value drives both.</td>
+</tr>
+<tr>
+<td><code>--hug-surface</code></td>
+<td>light <code>#ffffff</code> / dark <code>#171a20</code></td>
+<td>The frame&#39;s own background, so a box that is momentarily larger than the frame never shows the page through it.</td>
+</tr>
+<tr>
+<td><code>--hug-text</code></td>
+<td>light <code>#14171f</code> / dark <code>#ececea</code></td>
+<td>The frame&#39;s text colour, and the collapse glyph through <code>currentColor</code>.</td>
+</tr>
+<tr>
+<td><code>--hug-line</code></td>
+<td>light <code>#dfe3ea</code> / dark <code>#2b2f38</code></td>
+<td>Hairline borders and dividers.</td>
+</tr>
+<tr>
+<td><code>--hug-accent</code></td>
+<td>light <code>#4b46e0</code> / dark <code>#9b94ff</code></td>
+<td>The focus ring.</td>
+</tr>
+</tbody></table>
+<p>The four colour tokens carry a library-owned light/dark pair and are the documented
+colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
+set all four rather than one; the other three are coupled to the engine. These seven are the
+entire token surface.</p>
+<h3 id="parts">Parts</h3>
+<p>Every element the engine generates carries a <code>data-hug-part</code> attribute. It is the
+documented selector contract; the <code>.hug-*</code> classes remain on the same nodes, but new
+CSS should key off the part.</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Element</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>root</code></td>
+<td>The outer element the engine renders.</td>
+</tr>
+<tr>
+<td><code>backdrop</code></td>
+<td>The scrim behind the expanded frame.</td>
+</tr>
+<tr>
+<td><code>box</code></td>
+<td>The clipped box that holds the frame.</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td>The <code>&lt;iframe&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>collapse</code></td>
+<td>The library-owned slot that positions the expanded-mode control.</td>
+</tr>
+<tr>
+<td><code>collapse-icon</code></td>
+<td>The built-in collapse glyph.</td>
+</tr>
+</tbody></table>
+<p>The node inside the <code>collapse</code> slot is not the library&#39;s: it is the built-in button,
+or whatever <code>renderCollapse</code> returned (and nothing at all for <code>renderCollapse: null</code>).
+The slot owns where the control sits; the node owns what it is.</p>
+<p>State attributes sit on the root and are the other half of the contract: <code>data-mode</code>
+(<code>inline</code> / <code>expanded</code>), <code>data-phase</code> (<code>idle</code> / <code>expanding</code> / <code>collapsing</code> /
+<code>resizing</code>), <code>data-sizing</code> (<code>content</code> / <code>fixed</code>) and <code>data-ready</code>. The framed
+document receives <code>data-hug-sizing</code> on its own root.</p>
+<h3 id="layer-and-overriding"><code>@layer</code> and overriding</h3>
+<p>The whole stylesheet ships inside <code>@layer hugframe { … }</code>. An unlayered consumer rule
+therefore beats it whatever its specificity, so a consumer can override the expanded
+state with a plain rule and no <code>!important</code>: a <code>.hug-box { … }</code> in your own stylesheet
+wins over the library&#39;s <code>.hug-root[data-mode=&#39;expanded&#39;] .hug-box</code>.</p>
+<h3 id="example-restyling-the-collapse-control">Example: restyling the collapse control</h3>
+<p>The slot keeps the control&#39;s position; restyle the node inside it with ordinary,
+unlayered CSS:</p>
+<pre><code class="language-css">/* your stylesheet */
+[data-hug-part=&#39;collapse&#39;] .hug-collapse {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+}
+</code></pre>
+<h2 id="layout-rules-for-credible-framing">Layout rules for credible framing</h2>
+<ol>
+<li>Never use <code>vh</code>/<code>dvh</code>/<code>vw</code> on the axis the host controls while content-sized. A <code>min-height: 100vh</code> in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document&#39;s runtime warns once when two consecutive size reports equal the frame&#39;s own height, which is that loop&#39;s signature.</li>
+<li>Do not give the framed document&#39;s <code>html</code> or <code>body</code> a <code>height: 100%</code>.</li>
+<li>Use container queries, not media queries, inside the framed document: its width has nothing to do with the viewport.</li>
+</ol>
+<h2 id="constraints-worth-knowing">Constraints worth knowing</h2>
+<ol>
+<li>The framed document is never remounted by a mode change, so its state survives the morph. Moving the frame in the DOM is different: that detaches and re-inserts it, and the browser destroys the iframe&#39;s browsing context, so the framed document reloads. The same iframe node and engine survive and re-sync on the next <code>ready</code>, but genuine state preservation across a move needs <code>Element.moveBefore()</code>.</li>
+<li>The expanded view locks document scrolling while it is open, and the lock is ref-counted across frames. <code>lockScroll: false</code> opts a frame out.</li>
+<li><code>Escape</code> collapses, focus moves into the framed document on expand and returns to the element that was focused before it, and the expanded box carries <code>role=&quot;dialog&quot;</code> with <code>aria-modal</code>. The first two are switchable with <code>collapseOnEscape</code> and <code>manageFocus</code>; the dialog semantics are not, and are an accessibility contract rather than a preference.</li>
+</ol>
+</article>
+    </main>
+    <footer class="footer">
+  <div class="footer__inner">
+    <p class="footer__note">An iframe that fits its content, then opens into the whole window.</p>
+    <nav class="footer__nav" aria-label="Project links">
+      <a href="../">Demo</a>
+      <a href="../playground/">Playground</a>
+      <a href="./">API reference</a>
+      <a href="https://github.com/tiriana/hugframe" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+      <a href="https://www.npmjs.com/package/hugframe" target="_blank" rel="noopener noreferrer">
+        npm
+      </a>
+    </nav>
+  </div>
+</footer>
+    <script>
+      // The contents list is a sidebar on wide viewports and a collapsed <details> below the
+      // breakpoint docs.css uses; the scroll spy marks the section the reading column is in.
+      {
+        const panel = document.querySelector('.toc__panel')
+        const wide = matchMedia('(min-width: 1400px)')
+        const syncPanel = () => (panel.open = wide.matches)
+        syncPanel()
+        wide.addEventListener('change', syncPanel)
+
+        const links = new Map(
+          [...document.querySelectorAll('.toc__list a')].map((a) => [a.hash.slice(1), a]),
+        )
+        let current
+        const mark = (id) => {
+          if (id === current) return
+          current = id
+          for (const [key, a] of links) {
+            if (key === id) a.setAttribute('aria-current', 'location')
+            else a.removeAttribute('aria-current')
+          }
+        }
+
+        const headings = [...document.querySelectorAll('.page h2[id], .page h3[id]')]
+        const sync = () => {
+          // At the document bottom the last heading sits below the reading line, so no heading
+          // qualifies: clamp to the last section, which is the one in view there.
+          if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+            mark(headings.at(-1).id)
+            return
+          }
+          const line = window.innerHeight * 0.25
+          let best
+          for (const h of headings) {
+            const top = h.getBoundingClientRect().top
+            if (top <= line && (!best || top > best.top)) best = { id: h.id, top }
+          }
+          if (best) mark(best.id)
+        }
+
+        // A click marks its target and holds it until the reader scrolls again. The pin has to
+        // outlive the jump's own `scrollend` and the observer callback that follows it, or the
+        // marker falls back to the target's first subsection; a user gesture releases it.
+        let pinned = false
+        let jumping = false
+        const observer = new IntersectionObserver(
+          () => {
+            if (!pinned) sync()
+          },
+          { rootMargin: '0px 0px -75% 0px' },
+        )
+        headings.forEach((h) => observer.observe(h))
+        for (const a of links.values()) {
+          a.addEventListener('click', () => {
+            pinned = true
+            jumping = true
+            mark(a.hash.slice(1))
+          })
+        }
+        for (const type of ['wheel', 'touchstart', 'keydown']) {
+          window.addEventListener(
+            type,
+            () => {
+              pinned = false
+              jumping = false
+            },
+            { passive: true },
+          )
+        }
+        window.addEventListener('scrollend', () => {
+          if (jumping) jumping = false
+          else {
+            pinned = false
+            sync()
+          }
+        })
+      }
+    </script>
+  </body>
+</html>
