@@ -8,7 +8,7 @@
     "build:deps": "npm run build -w hugframe",
     "dev": "npm run build:deps && vite",
     "build": "npm run build:deps && vite build --outDir .demo-dist",
-    "build:demo:pages": "npm run build:deps && vite build --outDir .demo-dist --base=/hugframe/",
+    "build:demo:pages": "npm run build:deps && vite build --outDir .demo-dist --base=${GF_BASE_PATH:-/hugframe/}",
     "build:docs": "node scripts/build-docs.mjs",
     "build:pages": "npm run build:demo:pages && npm run build:docs && node scripts/assemble-pages.mjs",
     "test:e2e": "node test/e2e/run.mjs"
