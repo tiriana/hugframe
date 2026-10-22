@@ -9,8 +9,7 @@
       "component": "hugframe"
     },
     "packages/react": {
-      "component": "react",
-      "release-as": "0.1.0"
+      "component": "react"
     }
   }
 }
