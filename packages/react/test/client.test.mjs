@@ -27,19 +27,6 @@ define('requestAnimationFrame', window.requestAnimationFrame.bind(window))
 define('cancelAnimationFrame', window.cancelAnimationFrame.bind(window))
 define('IS_REACT_ACT_ENVIRONMENT', true)
 
-// jsdom leaves matchMedia out, and the engine asks it whether motion should be reduced.
-define('matchMedia', (query) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addEventListener() {},
-  removeEventListener() {},
-  addListener() {},
-  removeListener() {},
-  dispatchEvent: () => false,
-}))
-window.matchMedia = globalThis.matchMedia
-
 const React = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { HugFrame, useHugFrameMode } = await import('../dist/index.js')

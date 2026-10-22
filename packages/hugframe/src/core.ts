@@ -481,9 +481,13 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     template.setReady(false)
     opts.container.appendChild(template.root)
 
-    motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    prefersReducedMotion = motionQuery.matches
-    motionQuery.addEventListener('change', onMotionChange)
+    // jsdom and other minimal DOMs leave matchMedia out; its absence means no
+    // reduced-motion preference, not a broken environment.
+    if (typeof window.matchMedia === 'function') {
+      motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      prefersReducedMotion = motionQuery.matches
+      motionQuery.addEventListener('change', onMotionChange)
+    }
 
     if (typeof ResizeObserver !== 'undefined') {
       lastWidth = template.box.getBoundingClientRect().width

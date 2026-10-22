@@ -11,7 +11,7 @@ import {
 const ROOT_ELEMENT_SELECTOR = 'document.documentElement'
 
 export interface HugFrameChildOptions {
-  /** origin expected for the host document; default '*' (no check) */
+  /** origin expected for the host document; default '*' (any origin, the parent window is still required) */
   targetOrigin?: string
   /** element whose box height drives the frame; default 'document.documentElement' */
   sizeSelector?: string
@@ -73,6 +73,8 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
   let destroyed = false
   let frameHandle: number | null = null
   let lastSize: MeasuredSize | null = null
+  let previousHeight: number | null = null
+  let warnedAboutFrameHeight = false
   let observer: ResizeObserver | null = null
 
   function post(message: HugFrameChildMessage): void {
@@ -88,6 +90,22 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
     }
   }
 
+  // A document laid out at height: 100vh (or 100%) measures its own frame, so the host
+  // grows the frame and the document grows with it: the frame never hugs anything.
+  function warnAboutFrameHeight(height: number): void {
+    const frameHeight = window.innerHeight
+    const pinned = isFramed && height === frameHeight && previousHeight === frameHeight
+    previousHeight = height
+    if (!pinned || warnedAboutFrameHeight) return
+    warnedAboutFrameHeight = true
+    console.warn(
+      "hugframe: the framed document reports the frame's own height twice in a row, so it is " +
+        'sized to the frame rather than to its content. Size it to its content instead of ' +
+        '100vh/100%, or drive the height from the host and let it scroll with ' +
+        '`data-hug-sizing="fixed"` and `suspend()`/`resume()`.',
+    )
+  }
+
   function flush(force = false): void {
     frameHandle = null
     if (destroyed || suspended) return
@@ -101,6 +119,7 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
       return
     }
     lastSize = next
+    warnAboutFrameHeight(next.height)
     post({ source: HUGFRAME_SOURCE, type: 'size', height: next.height, width: next.width })
   }
 
@@ -150,9 +169,8 @@ export function createHugFrameChild(options: HugFrameChildOptions = {}): HugFram
 
   function handleMessage(event: MessageEvent): void {
     if (destroyed) return
-    if (targetOrigin !== '*' && (event.origin !== targetOrigin || event.source !== window.parent)) {
-      return
-    }
+    if (event.source !== window.parent) return
+    if (targetOrigin !== '*' && event.origin !== targetOrigin) return
     if (!isHugFrameParentMessage(event.data)) return
     const message = event.data
     if (message.type === 'mode') {
