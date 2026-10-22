@@ -211,7 +211,6 @@ function installDom() {
   }
   globalThis.window = {
     location: { origin: 'http://localhost' },
-    matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
     addEventListener() {},
     removeEventListener() {},
     setTimeout: (...args) => globalThis.setTimeout(...args),
@@ -219,8 +218,8 @@ function installDom() {
   }
 }
 
-// `prefers-reduced-motion` is forced on, so the engine settles the morph
-// synchronously and never reaches for a frame.
+// The engine feature-detects matchMedia, so a DOM without it needs no stub, and the stub
+// frame never runs, which leaves the morph un-settled and the tree as it was built.
 function mountFrame(options = {}) {
   installDom()
   return createHugFrame({
