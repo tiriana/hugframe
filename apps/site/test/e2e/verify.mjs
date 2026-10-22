@@ -307,7 +307,7 @@ for (const width of [1440, 1024, 420]) {
   check(`sideways: no horizontal overflow at ${width}`, gap <= 0, `scrollWidth-innerWidth=${gap}`)
 }
 
-for (const width of [1440, 1024]) {
+for (const width of [1440, 1024, 420]) {
   const worst = await worstGapDuringWidthChange(width)
   check(`sideways: none mid-glide at ${width}`, worst <= 0, `worst scrollWidth-innerWidth=${worst}`)
 }

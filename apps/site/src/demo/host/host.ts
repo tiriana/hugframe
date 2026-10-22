@@ -14,7 +14,7 @@ const FRAME_WIDTHS: readonly FrameWidth[] = ['1/3', '2/3', 'full']
 const WIDTH_SPANS: Record<FrameWidth, { frame: string; side: string; gap: string }> = {
   '1/3': { frame: '34%', side: 'calc(66% - 20px)', gap: '20px' },
   '2/3': { frame: '62%', side: 'calc(38% - 20px)', gap: '20px' },
-  full: { frame: '100%', side: '0px', gap: '0px' },
+  full: { frame: '100%', side: '100%', gap: '0px' },
 }
 
 const USAGE = `import { createHugFrame } from 'hugframe'
@@ -50,8 +50,10 @@ function siteChrome(): { header: Element; footer: Element } {
   const markup = chromeHtml
     .replaceAll('{{home}}', BASE_URL)
     .replaceAll('{{api}}', `${BASE_URL}api/`)
+    .replaceAll('{{react}}', `${BASE_URL}react/`)
     .replaceAll('{{demo-current}}', ' aria-current="page"')
     .replaceAll('{{api-current}}', '')
+    .replaceAll('{{react-current}}', '')
 
   const template = document.createElement('template')
   template.innerHTML = markup
@@ -155,13 +157,18 @@ export function mountHost(container: HTMLElement): void {
         class: 'lead__body',
         text: 'The headless, zero-dependency utility that hugs internal iframe dimensions and transitions smoothly into full-window mode without reloading the document. Lightweight, configurable, and built to integrate with any framework.',
       }),
-      el(
-        'ul',
-        { class: 'chips' },
-        ['Zero Dependencies', 'No Framework Required', 'React Wrapper Available'].map((label) =>
+      el('ul', { class: 'chips' }, [
+        ...['Zero Dependencies', 'No Framework Required'].map((label) =>
           el('li', { class: 'chip', text: label }),
         ),
-      ),
+        el('li', {}, [
+          el('a', {
+            class: 'chip chip--link',
+            attrs: { href: `${BASE_URL}react/` },
+            text: 'React Wrapper Available',
+          }),
+        ]),
+      ]),
       el('div', { class: 'snippet' }, [codeBlock('npm install hugframe'), codeBlock(USAGE)]),
     ]),
     workbench,

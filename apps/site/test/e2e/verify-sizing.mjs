@@ -50,6 +50,19 @@ const snap = () =>
       gutter: de ? win.innerWidth - de.clientWidth : null,
       boxZ: box ? getComputedStyle(box).zIndex : null,
       backdropZ: root ? getComputedStyle(root.querySelector('.hug-backdrop')).zIndex : null,
+      panel: (() => {
+        const hostFrame = document.querySelector('.frame-panel')
+        const side = document.querySelector('.side-panel')
+        if (!hostFrame || !side) return null
+        const f = hostFrame.getBoundingClientRect()
+        const s = side.getBoundingClientRect()
+        return {
+          frame: { top: +f.top.toFixed(1), left: +f.left.toFixed(1), width: +f.width.toFixed(1) },
+          side: { top: +s.top.toFixed(1), left: +s.left.toFixed(1), width: +s.width.toFixed(1) },
+          sideOpacity: getComputedStyle(side).opacity,
+          stacked: s.top >= f.bottom - 1,
+        }
+      })(),
     }
   })
 
@@ -101,6 +114,23 @@ check(
   'layout: the wider frame needs less height',
   narrow.frameH < wide.frameH - 40,
   `1/3=${wide.frameH} full=${narrow.frameH}`,
+)
+check(
+  'layout: the side panel sits beside the frame at 1/3',
+  wide.panel?.stacked === false && Math.abs(wide.panel.side.top - wide.panel.frame.top) <= 1,
+  JSON.stringify(wide.panel),
+)
+check(
+  'layout: full stacks the side panel under the frame',
+  narrow.panel?.stacked === true &&
+    Math.abs(narrow.panel.side.width - narrow.panel.frame.width) <= 1 &&
+    Math.abs(narrow.panel.side.left - narrow.panel.frame.left) <= 1,
+  JSON.stringify(narrow.panel),
+)
+check(
+  'layout: the stacked side panel stays visible',
+  narrow.panel?.sideOpacity === '1',
+  `opacity=${narrow.panel?.sideOpacity}`,
 )
 check(
   'layout: the framed app reflows with its container',
