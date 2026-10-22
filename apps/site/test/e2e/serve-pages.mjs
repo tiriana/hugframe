@@ -13,6 +13,13 @@ const root = resolve(process.argv[2] ?? resolve(here, '../../.pages'))
 const port = Number(process.argv[3] ?? 5199)
 const prefix = '/hugframe'
 
+// The built site bundles the library into its own pages, so dist is never part of
+// the output. A fixture that mounts the real engine instead of a fake needs it, so
+// it is served here under its own path, with the CORS header that lets a page from
+// another origin import the module.
+const distPrefix = `${prefix}/dist/`
+const distRoot = resolve(here, '../../../../packages/hugframe/dist')
+
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -40,8 +47,12 @@ const server = createServer(async (request, response) => {
   let relative = normalize(pathname.slice(prefix.length)).replace(/^\/+/, '')
   if (relative === '' || relative.endsWith('/')) relative = join(relative, 'index.html')
 
-  const file = join(root, relative)
-  if (!file.startsWith(root)) {
+  const isDist = pathname.startsWith(distPrefix)
+  const base = isDist ? distRoot : root
+  if (isDist) relative = relative.slice('dist/'.length)
+
+  const file = join(base, relative)
+  if (!file.startsWith(base)) {
     response.writeHead(403).end('forbidden')
     return
   }
@@ -49,11 +60,13 @@ const server = createServer(async (request, response) => {
   try {
     const info = await stat(file)
     if (!info.isFile()) throw new Error('not a file')
-    response.writeHead(200, {
+    const headers = {
       'content-type': types[extname(file)] ?? 'application/octet-stream',
       'content-length': info.size,
       'cache-control': 'no-store',
-    })
+    }
+    if (isDist) headers['access-control-allow-origin'] = '*'
+    response.writeHead(200, headers)
     createReadStream(file).pipe(response)
   } catch {
     response.writeHead(404, { 'content-type': 'text/plain' }).end(`not found: ${pathname}`)
