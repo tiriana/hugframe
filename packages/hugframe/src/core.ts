@@ -254,6 +254,7 @@ export function createHugFrame(options: HugFrameOptions): HugFrameInstance {
     inlineHeight = rect.height
     template.root.style.height = `${rect.height}px`
     pinBox(rect)
+    void template.box.offsetWidth // flush the pin before the phase enables the width transition
     template.iframe.style.height = ''
     setPhase('expanding')
     if (prefersReducedMotion) {
