@@ -174,7 +174,11 @@ check(
   `before=${fixed.boxH} after=${fixedAfterGrowth.boxH}`,
 )
 
-// ---- C. collapse affordance variants ----
+// ---- C. expanded frame: the built-in handle and the stacking order ----
+// The demo no longer offers a row to pick the collapse affordance: the library only
+// renders the control while expanded, so the row could not be reached behind the
+// overlay. The affordance variants are exercised through the playground's
+// #pg-affordance instead (see verify-playground.mjs).
 await click(/^expand$/i)
 await page.waitForTimeout(900)
 const defaultAffordance = await page.evaluate(() => {
@@ -201,45 +205,6 @@ check(
 )
 await page.keyboard.press('Escape')
 await page.waitForTimeout(900)
-
-await click(/custom icon/i)
-await page.waitForTimeout(300)
-await click(/^expand$/i)
-await page.waitForTimeout(900)
-const customAffordance = await page.evaluate(() => {
-  const b = document.querySelector('.hug-collapse')
-  return b
-    ? { exists: true, label: b.getAttribute('aria-label'), html: b.innerHTML.length }
-    : { exists: false }
-})
-check(
-  'affordance: custom icon replaces the glyph but keeps the button',
-  customAffordance.exists &&
-    customAffordance.label === 'Return to inline view' &&
-    customAffordance.html !== defaultAffordance.html,
-  JSON.stringify(customAffordance),
-)
-await page.keyboard.press('Escape')
-await page.waitForTimeout(900)
-
-await click(/^hidden/i)
-await page.waitForTimeout(300)
-await click(/^expand$/i)
-await page.waitForTimeout(900)
-const hiddenAffordance = await page.evaluate(() => ({
-  exists: !!document.querySelector('.hug-collapse'),
-  mode: document.querySelector('.hug-root')?.getAttribute('data-mode'),
-}))
-check(
-  'affordance: null hides the built-in control while staying expanded',
-  hiddenAffordance.exists === false && hiddenAffordance.mode === 'expanded',
-  JSON.stringify(hiddenAffordance),
-)
-await page.keyboard.press('Escape')
-await page.waitForTimeout(900)
-
-await click(/^default/i)
-await page.waitForTimeout(300)
 
 // ---- D. token override ----
 await page.addStyleTag({ content: '.hug-root { --hug-z-index: 4242; }' })

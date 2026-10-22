@@ -72,12 +72,15 @@ input {
   align-items: baseline;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .app-bar__name {
+  flex: none;
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .app-bar__meta {
@@ -85,6 +88,16 @@ input {
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Below this width the app name and the mode button leave no room for the meta text,
+   so it is dropped rather than painted under the button. */
+@container hugframe (max-width: 340px) {
+  .app-bar__meta {
+    display: none;
+  }
 }
 
 .mode-button {

@@ -174,8 +174,10 @@ await page.screenshot({ path: `${shots}/02-inline-after-send.png` })
 // 4. expand from inside the framed document
 await frame.locator('button[aria-label="Expand to the full window"]').click()
 await page.waitForTimeout(120)
-await page.screenshot({ path: `${shots}/03-mid-expand.png` })
+// Read the phase before the diagnostic screenshot: a screenshot can take longer than
+// the morph itself under load, which would let the frame settle to idle first.
 const midExpand = await snap()
+await page.screenshot({ path: `${shots}/03-mid-expand.png` })
 check('morph: reports a transitional phase', midExpand.phase !== 'idle', `phase=${midExpand.phase}`)
 check(
   'morph: box is pulled out of flow while morphing',

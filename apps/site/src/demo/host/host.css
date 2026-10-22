@@ -9,15 +9,6 @@
   max-width: 720px;
 }
 
-.eyebrow {
-  margin: 0 0 14px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .lead h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -32,6 +23,53 @@
   font-size: 18px;
   color: var(--muted);
   max-width: 60ch;
+}
+
+.snippet {
+  margin-top: 28px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.snippet__code {
+  margin: 0;
+  padding: 14px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.snippet__code code {
+  font: inherit;
+}
+
+.snippet__code:first-child {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.snippet__code + .snippet__code {
+  border-top: 1px solid var(--line);
+}
+
+.api-link {
+  margin: 32px 0 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.api-link a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.api-link a:hover {
+  color: var(--accent);
 }
 
 .workbench {
@@ -124,6 +162,10 @@
   gap: 8px;
 }
 
+.meterbar__item.is-idle {
+  visibility: hidden;
+}
+
 .meterbar__label {
   color: var(--muted);
 }
@@ -168,53 +210,6 @@
   letter-spacing: 0.04em;
   color: var(--muted);
   margin-right: 4px;
-}
-
-.how {
-  margin-top: 64px;
-  padding-top: 40px;
-  border-top: 1px solid var(--line);
-}
-
-.how h2 {
-  margin: 0 0 12px;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 28px;
-}
-
-.how__body {
-  margin: 0 0 24px;
-  max-width: 62ch;
-  color: var(--muted);
-}
-
-.protocol {
-  margin: 0;
-  display: grid;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--line);
-}
-
-.protocol__row {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 20px;
-  padding: 14px 18px;
-  background: var(--surface);
-}
-
-.protocol dt {
-  margin: 0;
-}
-
-.protocol dd {
-  margin: 0;
-  color: var(--muted);
-  font-size: 15px;
 }
 
 .head-controls {
@@ -364,11 +359,6 @@
 
   .workbench {
     padding: 18px;
-  }
-
-  .protocol__row {
-    grid-template-columns: 1fr;
-    gap: 4px;
   }
 
   .workbench__head {

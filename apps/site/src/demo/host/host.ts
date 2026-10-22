@@ -1,11 +1,9 @@
 import { el } from '@/demo/dom'
 import { createHugFrame } from 'hugframe'
-import type { HugFrameMode } from 'hugframe'
 import chromeHtml from '@/site/chrome.html?raw'
 
 type HugFrameInstance = ReturnType<typeof createHugFrame>
 type ColumnCount = 1 | 2 | 3
-type CollapseStyle = 'default' | 'custom' | 'hidden'
 
 const BASE_URL = import.meta.env.BASE_URL
 const CHILD_SRC = `${BASE_URL}child.html`
@@ -13,17 +11,17 @@ const STATUS_SRC = `${BASE_URL}child.html?view=status`
 const FIXED_HEIGHT = 'clamp(280px, 42vh, 460px)'
 
 const COLUMNS: readonly ColumnCount[] = [1, 2, 3]
-const COLLAPSE_STYLES: readonly CollapseStyle[] = ['default', 'custom', 'hidden']
-const COLLAPSE_LABELS: Record<CollapseStyle, string> = {
-  default: 'Default',
-  custom: 'Custom icon',
-  hidden: 'Hidden',
-}
 const COLUMN_WIDTHS: Record<ColumnCount, { frame: string; side: string; gap: string }> = {
   1: { frame: '34%', side: 'calc(66% - 20px)', gap: '20px' },
   2: { frame: '62%', side: 'calc(38% - 20px)', gap: '20px' },
   3: { frame: '100%', side: '0px', gap: '0px' },
 }
+
+const USAGE = `import { createHugFrame } from 'hugframe'
+import 'hugframe/css'
+
+const frame = createHugFrame({ container: el, src: '/app.html', title: 'App' })
+frame.expand()`
 
 interface MeterItem {
   root: HTMLElement
@@ -41,11 +39,8 @@ function meterItem(label: string): MeterItem {
   }
 }
 
-function protocolRow(term: string, description: string): HTMLElement {
-  return el('div', { class: 'protocol__row' }, [
-    el('dt', {}, [el('code', { text: term })]),
-    el('dd', { text: description }),
-  ])
+function codeBlock(text: string): HTMLElement {
+  return el('pre', { class: 'snippet__code' }, [el('code', { text })])
 }
 
 // The chrome links are absolute, built from Vite's base URL: `/` in dev, `/hugframe/`
@@ -71,10 +66,7 @@ function siteChrome(): { header: Element; footer: Element } {
 export function mountHost(container: HTMLElement): void {
   let columns: ColumnCount = 2
   let fixedHeight = false
-  let collapseStyle: CollapseStyle = 'default'
   let measured: number | null = null
-  let ready = false
-  let primaryMode: HugFrameMode = 'inline'
   let phase = 'idle'
   let sizing = 'content'
   let secondary: HugFrameInstance | null = null
@@ -83,23 +75,14 @@ export function mountHost(container: HTMLElement): void {
   const statusMount = el('div')
 
   const heightItem = meterItem('content height')
-  const modeItem = meterItem('mode')
   const phaseItem = meterItem('phase')
-  const sizingItem = meterItem('sizing')
-  const readyItem = meterItem('status')
   const meterbar = el('div', { class: 'meterbar', attrs: { 'aria-live': 'polite' } }, [
     heightItem.root,
-    modeItem.root,
     phaseItem.root,
-    sizingItem.root,
-    readyItem.root,
   ])
 
   const heightRow = el('div', { class: 'controls' }, [
     el('span', { class: 'controls__label', text: 'Frame height' }),
-  ])
-  const collapseRow = el('div', { class: 'controls' }, [
-    el('span', { class: 'controls__label', text: 'Collapse control' }),
   ])
   const driveRow = el('div', { class: 'controls' }, [
     el('span', { class: 'controls__label', text: 'Drive the framed app' }),
@@ -116,7 +99,7 @@ export function mountHost(container: HTMLElement): void {
       el('h2', { text: 'Threads workspace' }),
       el('p', {
         class: 'workbench__note',
-        text: 'Change the page columns and the frame glides into its new width.',
+        text: 'Switch the column count and the frame glides to its new width.',
       }),
     ]),
     headControls,
@@ -127,7 +110,6 @@ export function mountHost(container: HTMLElement): void {
     primaryMount,
     meterbar,
     heightRow,
-    collapseRow,
     driveRow,
   ])
 
@@ -159,31 +141,18 @@ export function mountHost(container: HTMLElement): void {
 
   const main = el('main', {}, [
     el('section', { class: 'lead', attrs: { id: 'top' } }, [
-      el('p', { class: 'eyebrow', text: 'Embedded app windows' }),
-      el('h1', { text: 'An iframe that fits its content, then opens into the whole window.' }),
+      el('h1', { text: 'Hugs its content, glides into the whole window.' }),
       el('p', {
         class: 'lead__body',
-        text: 'The framed document reports its own height, so the host wraps it exactly. Let the host drive the height instead and the frame becomes a fixed window the app scrolls inside. Either way it morphs into a chromeless full-window view and back without reloading.',
+        text: 'The framed document reports its own height, so the frame is exactly as tall as its content — and it stays smooth while that height changes. Expand it and it morphs into a chromeless full-window view without remounting the iframe, so the app inside keeps its state.',
       }),
+      el('div', { class: 'snippet' }, [codeBlock('npm install hugframe'), codeBlock(USAGE)]),
     ]),
     workbench,
-    el('section', { class: 'how', attrs: { id: 'how' } }, [
-      el('h2', { text: 'How it works' }),
-      el('p', { class: 'how__body' }, [
-        'The child document runs ',
-        el('code', { text: 'createHugFrameChild()' }),
-        ' and speaks a small message protocol with the host. The host sizes the frame, tells the child which mode it is in, and tells it whether the host is hugging its content or driving the height.',
-      ]),
-      el('dl', { class: 'protocol' }, [
-        protocolRow('ready', 'The child loaded and attached its listeners.'),
-        protocolRow('size', 'Measured height and width, reported on every content change.'),
-        protocolRow('request', "Expand, collapse, or close, from the child's own controls."),
-        protocolRow('mode', 'Inline or expanded, so the child adapts its own layout.'),
-        protocolRow(
-          'sizing',
-          'Content-hugging or a host-driven height, so the child knows who is in charge.',
-        ),
-      ]),
+    el('p', { class: 'api-link' }, [
+      'The wire protocol, every option and the CSS tokens are in the ',
+      el('a', { attrs: { href: `${BASE_URL}api/` }, text: 'API reference' }),
+      '.',
     ]),
   ])
   const page = el('div', { class: 'page' }, [main])
@@ -199,14 +168,8 @@ export function mountHost(container: HTMLElement): void {
     maxHeight: 880,
     initialHeight: 380,
     height: 'content',
-    onReady: () => {
-      ready = true
-      render()
-    },
     onModeChange: (mode) => {
-      primaryMode = mode
       if (mode === 'expanded') secondary?.collapse()
-      render()
     },
     onPhaseChange: (next) => {
       phase = next
@@ -230,7 +193,6 @@ export function mountHost(container: HTMLElement): void {
     },
   })
 
-  primaryMode = primary.getMode()
   phase = primary.getPhase()
   sizing = primary.getSizing()
 
@@ -284,23 +246,6 @@ export function mountHost(container: HTMLElement): void {
   })
   heightRow.append(hugButton, fixedButton)
 
-  const collapseItems = COLLAPSE_STYLES.map((style) => ({
-    style,
-    element: el('button', {
-      class: 'btn',
-      attrs: { type: 'button' },
-      text: COLLAPSE_LABELS[style],
-      on: {
-        click: () => {
-          collapseStyle = style
-          applyCollapse()
-          render()
-        },
-      },
-    }),
-  }))
-  for (const item of collapseItems) collapseRow.append(item.element)
-
   const statusExpand = el('button', {
     class: 'btn',
     attrs: { type: 'button' },
@@ -309,34 +254,17 @@ export function mountHost(container: HTMLElement): void {
   })
   statusHead.append(statusExpand)
 
-  const driveActions: ReadonlyArray<{ label: string; payload: unknown }> = [
-    { label: 'Add a thread', payload: { action: 'add-thread' } },
-    { label: 'Remove a thread', payload: { action: 'remove-thread' } },
-    { label: 'Open a thread', payload: { action: 'select-thread' } },
-  ]
-  for (const action of driveActions) {
-    driveRow.append(
-      el('button', {
-        class: 'btn',
-        attrs: { type: 'button' },
-        text: action.label,
-        on: { click: () => primary.sendMessage(action.payload) },
-      }),
-    )
-  }
+  driveRow.append(
+    el('button', {
+      class: 'btn',
+      attrs: { type: 'button' },
+      text: 'Add a thread',
+      on: { click: () => primary.sendMessage({ action: 'add-thread' }) },
+    }),
+  )
 
   function applyHeight(): void {
     primary.update({ height: fixedHeight ? FIXED_HEIGHT : 'content' })
-  }
-
-  function applyCollapse(): void {
-    primary.update({
-      collapseIcon:
-        collapseStyle === 'custom'
-          ? el('span', { attrs: { 'aria-hidden': 'true' }, text: '×' })
-          : undefined,
-      renderCollapse: collapseStyle === 'hidden' ? null : undefined,
-    })
   }
 
   function render(): void {
@@ -357,20 +285,11 @@ export function mountHost(container: HTMLElement): void {
     fixedButton.classList.toggle('btn--primary', fixedHeight)
     fixedButton.setAttribute('aria-pressed', fixedHeight ? 'true' : 'false')
 
-    for (const item of collapseItems) {
-      const active = item.style === collapseStyle
-      item.element.classList.toggle('btn--primary', active)
-      item.element.setAttribute('aria-pressed', active ? 'true' : 'false')
-    }
-
     heightItem.label.textContent = sizing === 'fixed' ? 'frame height' : 'content height'
     heightItem.value.textContent = measured === null ? 'measuring' : `${measured}px`
-    modeItem.value.textContent = primaryMode
+    phaseItem.root.classList.toggle('is-idle', phase === 'idle')
     phaseItem.value.textContent = phase
     phaseItem.value.className = phase === 'idle' ? 'pill pill--ok' : 'pill pill--busy'
-    sizingItem.value.textContent = sizing
-    readyItem.value.textContent = ready ? 'ready' : 'waiting'
-    readyItem.value.className = ready ? 'pill pill--ok' : 'pill pill--wait'
   }
 
   const iframe = primary.getIframe()
