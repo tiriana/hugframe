@@ -4,10 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta
-      name="description"
-      content="API reference for hugframe: an iframe that hugs its content, then morphs into a chromeless full-window view."
-    />
+    <meta name="description" content="API reference for hugframe: an iframe that hugs its content, then morphs into a chromeless full-window view." />
     <title>hugframe API reference</title>
     <link rel="icon" href="../favicon.svg" />
     <style>
@@ -29,6 +26,7 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
+  --frame-radius: 14px;
 
   --font-body:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -58,6 +56,11 @@
     --shadow-md: 0 1px 2px rgb(0 0 0 / 45%), 0 20px 44px -24px rgb(0 0 0 / 70%);
   }
 }
+
+:where(.hug-root:not([data-mode='expanded'])) .hug-box {
+  border-radius: var(--frame-radius);
+}
+/* The library frame is square; round the inline box without outranking a recipe. */
 
 /* The shared shell: the background and texture, the type, the header, the footer and the
    navigation behaviour. The demo loads this file through its entry module and the API page
@@ -281,11 +284,93 @@ code {
    from src/demo/theme.css; both are inlined by scripts/build-docs.mjs. Nothing here
    re-declares a colour, a font or a shell dimension. */
 
+/* The reading column is centred by the outer grid; the contents nav lives in the page's
+   own margin, so it never takes width from the column. Below the breakpoint the grid
+   collapses and the nav becomes a <details> block above the article. */
+.docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
+  column-gap: 24px;
+  align-items: start;
+  padding: 40px 24px 104px;
+}
+
 .page {
+  grid-column: 2;
+  min-width: 0;
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 40px 24px 104px;
   line-height: 1.62;
+}
+
+.toc {
+  grid-column: 1;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  justify-self: end;
+  width: min(196px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.toc__summary {
+  display: none;
+}
+
+.toc__list,
+.toc__sub {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc__list a {
+  display: block;
+  padding: 4px 9px;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  text-decoration: none;
+  overflow-wrap: break-word;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.toc__list a:hover {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* The current section carries a bar, a weight change and a tint, so it is not colour alone. */
+.toc__list a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.toc__list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.toc__sub {
+  padding-left: 12px;
+}
+
+.toc__list a code {
+  font-size: 0.82em;
+}
+
+.toc__sub a {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-size: 11.5px;
 }
 
 .page h1 {
@@ -434,8 +519,78 @@ code {
   outline-offset: 2px;
 }
 
+.page :is(h2, h3)[id] {
+  scroll-margin-top: 24px;
+}
+
+@media (max-width: 1399px) {
+  .docs {
+    display: block;
+  }
+
+  .toc {
+    position: static;
+    grid-column: auto;
+    justify-self: normal;
+    width: auto;
+    max-height: none;
+    margin-bottom: 28px;
+    overflow: visible;
+  }
+
+  .toc__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc__summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 160ms ease;
+  }
+
+  .toc__panel[open] .toc__summary::after {
+    transform: rotate(-135deg) translateY(-1px);
+  }
+
+  .toc__summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toc__panel[open] .toc__list {
+    margin-top: 8px;
+  }
+
+  .toc__list a {
+    padding: 7px 12px;
+  }
+}
+
 @media (max-width: 620px) {
-  .page {
+  .docs {
     padding: 32px 18px 80px;
   }
 
@@ -470,6 +625,7 @@ code {
     <nav class="masthead__nav" aria-label="Site sections">
       <a href="../" >Demo</a>
       <a href="../playground/">Playground</a>
+      <a href="../react/" >React</a>
       <a href="./"  aria-current="page">API reference</a>
     </nav>
     <div class="masthead__util">
@@ -507,11 +663,18 @@ code {
     </div>
   </div>
 </header>
-    <main class="page"><h1>hugframe API reference</h1>
+    <main class="docs">
+      <nav class="toc" aria-label="On this page">
+        <details class="toc__panel" open>
+          <summary class="toc__summary">On this page</summary>
+          <ol class="toc__list"><li><a href="#package-entry-points">Package entry points</a></li><li><a href="#createhugframe-options">createHugFrame(options)</a><ol class="toc__sub"><li><a href="#options">Options</a></li><li><a href="#instance">Instance</a></li><li><a href="#events">Events</a></li><li><a href="#phases">Phases</a></li></ol></li><li><a href="#hug-frame"><code>&lt;hug-frame&gt;</code></a><ol class="toc__sub"><li><a href="#attributes">Attributes</a></li><li><a href="#properties">Properties</a></li><li><a href="#methods">Methods</a></li></ol></li><li><a href="#createhugframechild-options">createHugFrameChild(options)</a><ol class="toc__sub"><li><a href="#options-1">Options</a></li><li><a href="#instance-1">Instance</a></li><li><a href="#attributes-the-runtime-writes">Attributes the runtime writes</a></li></ol></li><li><a href="#the-wire-protocol">The wire protocol</a><ol class="toc__sub"><li><a href="#framed-document-to-host">Framed document to host</a></li><li><a href="#host-to-framed-document">Host to framed document</a></li><li><a href="#exported-helpers">Exported helpers</a></li></ol></li><li><a href="#appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</a><ol class="toc__sub"><li><a href="#custom-properties">Custom properties</a></li><li><a href="#parts">Parts</a></li><li><a href="#layer-and-overriding"><code>@layer</code> and overriding</a></li><li><a href="#example-restyling-the-collapse-control">Example: restyling the collapse control</a></li></ol></li><li><a href="#layout-rules-for-credible-framing">Layout rules for credible framing</a></li><li><a href="#constraints-worth-knowing">Constraints worth knowing</a></li></ol>
+        </details>
+      </nav>
+      <article class="page"><h1 id="hugframe-api-reference">hugframe API reference</h1>
 <p>The complete public surface of <code>hugframe</code>. For a quick start, see the <a href="https://github.com/tiriana/hugframe#readme">README</a>.</p>
 <p>Everything here is framework-free: plain TypeScript over DOM APIs, no runtime dependencies. The package
 is ESM-only and browser-only, and it imports nothing.</p>
-<h2>Package entry points</h2>
+<h2 id="package-entry-points">Package entry points</h2>
 <ol>
 <li><code>hugframe</code> — the engine, the <code>&lt;hug-frame&gt;</code> element, the protocol guards and the types.</li>
 <li><code>hugframe/child</code> — the runtime that runs <em>inside</em> the framed document.</li>
@@ -522,11 +685,11 @@ import &#39;hugframe/css&#39;
 </code></pre>
 <p>Importing <code>hugframe</code> also registers <code>&lt;hug-frame&gt;</code>, so importing it for the element alone is a legitimate
 side effect and the package is not marked side-effect free.</p>
-<h2>createHugFrame(options)</h2>
+<h2 id="createhugframe-options">createHugFrame(options)</h2>
 <p>Creates a frame inside <code>container</code> and returns an instance.</p>
 <pre><code class="language-ts">function createHugFrame(options: HugFrameOptions): HugFrameInstance
 </code></pre>
-<h3>Options</h3>
+<h3 id="options">Options</h3>
 <table>
 <thead>
 <tr>
@@ -711,7 +874,7 @@ side effect and the package is not marked side-effect free.</p>
 <td>Arbitrary payload sent from the framed document with <code>sendMessage()</code>.</td>
 </tr>
 </tbody></table>
-<h3>Instance</h3>
+<h3 id="instance">Instance</h3>
 <table>
 <thead>
 <tr>
@@ -781,7 +944,7 @@ side effect and the package is not marked side-effect free.</p>
 <td>Detaches every listener, observer and timer, releases the scroll lock, and removes the rendered tree.</td>
 </tr>
 </tbody></table>
-<h3>Events</h3>
+<h3 id="events">Events</h3>
 <p>Dispatched on the root element with <code>bubbles: false</code>, so listen on <code>instance.element</code> rather than on an ancestor.</p>
 <table>
 <thead>
@@ -815,14 +978,14 @@ side effect and the package is not marked side-effect free.</p>
 <td><code>{ payload }</code></td>
 </tr>
 </tbody></table>
-<h3>Phases</h3>
+<h3 id="phases">Phases</h3>
 <p><code>idle</code> is the resting state. <code>expanding</code> and <code>collapsing</code> are the morph. <code>resizing</code> is entered when the
 embedding layout changes the frame&#39;s width underneath it — the engine suspends content chasing, holds the
 height so the framed document clips rather than jumps, and settles onto the newly reported height after
 120ms of width quiescence, or 400ms at the latest. Both waits are configurable with <code>resizeSettleMs</code> and
 <code>resizeSafetyMs</code>. With <code>prefers-reduced-motion: reduce</code> the phase is skipped entirely and heights are
 applied instantly.</p>
-<h2><code>&lt;hug-frame&gt;</code></h2>
+<h2 id="hug-frame"><code>&lt;hug-frame&gt;</code></h2>
 <p>The same engine as an element. Register it by importing the package.</p>
 <pre><code class="language-html">&lt;hug-frame src=&quot;/embedded.html&quot; title=&quot;Embedded app&quot; height=&quot;content&quot;&gt;&lt;/hug-frame&gt;
 &lt;script type=&quot;module&quot;&gt;
@@ -832,7 +995,7 @@ applied instantly.</p>
   el.expand()
 &lt;/script&gt;
 </code></pre>
-<h3>Attributes</h3>
+<h3 id="attributes">Attributes</h3>
 <table>
 <thead>
 <tr>
@@ -897,7 +1060,7 @@ applied instantly.</p>
 <td>Height written on the box once expanded.</td>
 </tr>
 </tbody></table>
-<h3>Properties</h3>
+<h3 id="properties">Properties</h3>
 <p><code>collapseIcon</code> (<code>Node | string</code>), <code>renderCollapse</code> (<code>((handle) =&gt; Node) | null</code>) and <code>iframeProps</code> — the
 options that cannot be expressed as attributes. There is deliberately no <code>collapse-icon</code> attribute: a glyph
 is a <code>Node</code> or a string, and the element takes it as a property.</p>
@@ -906,16 +1069,16 @@ is a <code>Node</code> or a string, and the element takes it as a property.</p>
 attributes. Every numeric and string knob above — <code>resizeSettleMs</code>, <code>resizeSafetyMs</code>, <code>resizeWidthEpsilon</code>,
 <code>morphSettleMarginMs</code>, <code>expandedWidth</code> and <code>expandedHeight</code> — is attribute-backed and also readable and
 writable as a property of the same name.</p>
-<h3>Methods</h3>
+<h3 id="methods">Methods</h3>
 <p>The instance methods above, plus <code>destroy()</code>. <code>connectedCallback</code> creates the engine and
 <code>disconnectedCallback</code> tears it down, but teardown is deferred by a microtask so that moving the element
 within the DOM relocates it instead of rebuilding it.</p>
-<h2>createHugFrameChild(options)</h2>
+<h2 id="createhugframechild-options">createHugFrameChild(options)</h2>
 <p>Import from the <code>hugframe/child</code> subpath, and call it inside the framed document.</p>
 <pre><code class="language-ts">function createHugFrameChild(options?: HugFrameChildOptions): HugFrameChild
 function getHugFrameChild(): HugFrameChild | undefined
 </code></pre>
-<h3>Options</h3>
+<h3 id="options-1">Options</h3>
 <table>
 <thead>
 <tr>
@@ -972,21 +1135,21 @@ function getHugFrameChild(): HugFrameChild | undefined
 where it serves its framed document from, while the framed document defaults to <code>&#39;*&#39;</code>, because it cannot
 know which host embedded it. The wildcard relaxes the origin check only — the framed document always
 requires <code>event.source</code> to be its parent window.</p>
-<h3>Instance</h3>
+<h3 id="instance-1">Instance</h3>
 <p><code>isFramed</code>, <code>mode</code> and <code>sizing</code> are read-only. Methods: <code>resize()</code>, <code>suspend()</code>, <code>resume()</code>,
 <code>requestExpand()</code>, <code>requestCollapse()</code>, <code>requestClose()</code>, <code>sendMessage(payload)</code>, <code>destroy()</code>.</p>
 <p>The runtime is a safe no-op when the document is opened outside a frame, so a framed app can also be
 previewed directly. It warns once through <code>console.warn</code> when two consecutive size reports equal the
 frame&#39;s own height, the signature of a document laid out at <code>height: 100vh</code>.</p>
-<h3>Attributes the runtime writes</h3>
+<h3 id="attributes-the-runtime-writes">Attributes the runtime writes</h3>
 <p><code>data-hug-sizing</code> — <code>content</code> or <code>fixed</code> — on the framed document&#39;s root element, for the framed
 document&#39;s own CSS. Keying <code>overflow</code> off <code>data-hug-sizing=&quot;fixed&quot;</code> is what lets a host-driven height
 scroll internally, while content sizing clips the single frame between content growth and the height
 report arriving.</p>
-<h2>The wire protocol</h2>
+<h2 id="the-wire-protocol">The wire protocol</h2>
 <p>Every message is a plain JSON-serializable object carrying <code>source: &#39;hugframe&#39;</code>, and every message is
 validated by an exported guard.</p>
-<h3>Framed document to host</h3>
+<h3 id="framed-document-to-host">Framed document to host</h3>
 <table>
 <thead>
 <tr>
@@ -1011,7 +1174,7 @@ validated by an exported guard.</p>
 <td><code>{ source, type: &#39;custom&#39;, payload: unknown }</code></td>
 </tr>
 </tbody></table>
-<h3>Host to framed document</h3>
+<h3 id="host-to-framed-document">Host to framed document</h3>
 <table>
 <thead>
 <tr>
@@ -1032,7 +1195,7 @@ validated by an exported guard.</p>
 <td><code>{ source, type: &#39;custom&#39;, payload: unknown }</code></td>
 </tr>
 </tbody></table>
-<h3>Exported helpers</h3>
+<h3 id="exported-helpers">Exported helpers</h3>
 <p><code>HUGFRAME_SOURCE</code> (the string <code>&#39;hugframe&#39;</code>), <code>HUGFRAME_Z_INDEX</code>, <code>isHugFrameChildMessage(value)</code>,
 <code>isHugFrameParentMessage(value)</code> and <code>postHugFrameMessage(target, message, targetOrigin)</code>.</p>
 <p>Two checks matter and both are enforced. The host verifies that <code>event.source</code> is the frame&#39;s own
@@ -1040,13 +1203,15 @@ validated by an exported guard.</p>
 window as well as the origin. The parent check holds even when <code>targetOrigin</code> is <code>&#39;*&#39;</code>, so the wildcard
 widens which origins are accepted, not which windows. Trusting the <code>source</code> field inside the payload alone
 would be a security regression.</p>
-<h2>Appearance: parts, state attributes and the layered stylesheet</h2>
+<h2 id="appearance-parts-state-attributes-and-the-layered-stylesheet">Appearance: parts, state attributes and the layered stylesheet</h2>
 <p>The appearance API is three things: the four colour custom properties, the three
 engine-coupled custom properties, and the stable <code>data-hug-part</code> hooks on every
 element the engine generates. Every other visual value is a plain literal in the
 rule that already used it, and the whole stylesheet is wrapped in
-<code>@layer hugframe</code>.</p>
-<h3>Custom properties</h3>
+<code>@layer hugframe</code>. The framed box is one of those literals: it ships square —
+<code>border-radius: 0</code> on <code>[data-hug-part=&#39;box&#39;]</code> — so a rounded frame is the host&#39;s
+to set, as the demo does with <code>14px</code>.</p>
+<h3 id="custom-properties">Custom properties</h3>
 <p>Set them on the root element — directly, or through <code>className</code>/<code>style</code>.</p>
 <table>
 <thead>
@@ -1096,7 +1261,7 @@ rule that already used it, and the whole stylesheet is wrapped in
 colour path, and a host that owns its own theme — MUI, a manual light/dark toggle — should
 set all four rather than one; the other three are coupled to the engine. These seven are the
 entire token surface.</p>
-<h3>Parts</h3>
+<h3 id="parts">Parts</h3>
 <p>Every element the engine generates carries a <code>data-hug-part</code> attribute. It is the
 documented selector contract; the <code>.hug-*</code> classes remain on the same nodes, but new
 CSS should key off the part.</p>
@@ -1139,12 +1304,12 @@ The slot owns where the control sits; the node owns what it is.</p>
 (<code>inline</code> / <code>expanded</code>), <code>data-phase</code> (<code>idle</code> / <code>expanding</code> / <code>collapsing</code> /
 <code>resizing</code>), <code>data-sizing</code> (<code>content</code> / <code>fixed</code>) and <code>data-ready</code>. The framed
 document receives <code>data-hug-sizing</code> on its own root.</p>
-<h3><code>@layer</code> and overriding</h3>
+<h3 id="layer-and-overriding"><code>@layer</code> and overriding</h3>
 <p>The whole stylesheet ships inside <code>@layer hugframe { … }</code>. An unlayered consumer rule
 therefore beats it whatever its specificity, so a consumer can override the expanded
 state with a plain rule and no <code>!important</code>: a <code>.hug-box { … }</code> in your own stylesheet
 wins over the library&#39;s <code>.hug-root[data-mode=&#39;expanded&#39;] .hug-box</code>.</p>
-<h3>Example: restyling the collapse control</h3>
+<h3 id="example-restyling-the-collapse-control">Example: restyling the collapse control</h3>
 <p>The slot keeps the control&#39;s position; restyle the node inside it with ordinary,
 unlayered CSS:</p>
 <pre><code class="language-css">/* your stylesheet */
@@ -1156,25 +1321,27 @@ unlayered CSS:</p>
   color: #fff;
 }
 </code></pre>
-<h2>Layout rules for credible framing</h2>
+<h2 id="layout-rules-for-credible-framing">Layout rules for credible framing</h2>
 <ol>
 <li>Never use <code>vh</code>/<code>dvh</code>/<code>vw</code> on the axis the host controls while content-sized. A <code>min-height: 100vh</code> in inline mode makes the frame report the viewport height, the host grows the frame, and the content grows again — a resize loop. The framed document&#39;s runtime warns once when two consecutive size reports equal the frame&#39;s own height, which is that loop&#39;s signature.</li>
 <li>Do not give the framed document&#39;s <code>html</code> or <code>body</code> a <code>height: 100%</code>.</li>
 <li>Use container queries, not media queries, inside the framed document: its width has nothing to do with the viewport.</li>
 </ol>
-<h2>Constraints worth knowing</h2>
+<h2 id="constraints-worth-knowing">Constraints worth knowing</h2>
 <ol>
 <li>The framed document is never remounted by a mode change, so its state survives the morph. Moving the frame in the DOM is different: that detaches and re-inserts it, and the browser destroys the iframe&#39;s browsing context, so the framed document reloads. The same iframe node and engine survive and re-sync on the next <code>ready</code>, but genuine state preservation across a move needs <code>Element.moveBefore()</code>.</li>
 <li>The expanded view locks document scrolling while it is open, and the lock is ref-counted across frames. <code>lockScroll: false</code> opts a frame out.</li>
 <li><code>Escape</code> collapses, focus moves into the framed document on expand and returns to the element that was focused before it, and the expanded box carries <code>role=&quot;dialog&quot;</code> with <code>aria-modal</code>. The first two are switchable with <code>collapseOnEscape</code> and <code>manageFocus</code>; the dialog semantics are not, and are an accessibility contract rather than a preference.</li>
 </ol>
-</main>
+</article>
+    </main>
     <footer class="footer">
   <div class="footer__inner">
     <p class="footer__note">An iframe that fits its content, then opens into the whole window.</p>
     <nav class="footer__nav" aria-label="Project links">
       <a href="../">Demo</a>
       <a href="../playground/">Playground</a>
+      <a href="../react/" >React</a>
       <a href="./">API reference</a>
       <a href="https://github.com/tiriana/hugframe" target="_blank" rel="noopener noreferrer">
         GitHub
@@ -1185,5 +1352,83 @@ unlayered CSS:</p>
     </nav>
   </div>
 </footer>
+    <script>
+      // The contents list is a sidebar on wide viewports and a collapsed <details> below the
+      // breakpoint docs.css uses; the scroll spy marks the section the reading column is in.
+      {
+        const panel = document.querySelector('.toc__panel')
+        const wide = matchMedia('(min-width: 1400px)')
+        const syncPanel = () => (panel.open = wide.matches)
+        syncPanel()
+        wide.addEventListener('change', syncPanel)
+
+        const links = new Map(
+          [...document.querySelectorAll('.toc__list a')].map((a) => [a.hash.slice(1), a]),
+        )
+        let current
+        const mark = (id) => {
+          if (id === current) return
+          current = id
+          for (const [key, a] of links) {
+            if (key === id) a.setAttribute('aria-current', 'location')
+            else a.removeAttribute('aria-current')
+          }
+        }
+
+        const headings = [...document.querySelectorAll('.page h2[id], .page h3[id]')]
+        const sync = () => {
+          // At the document bottom the last heading sits below the reading line, so no heading
+          // qualifies: clamp to the last section, which is the one in view there.
+          if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+            mark(headings.at(-1).id)
+            return
+          }
+          const line = window.innerHeight * 0.25
+          let best
+          for (const h of headings) {
+            const top = h.getBoundingClientRect().top
+            if (top <= line && (!best || top > best.top)) best = { id: h.id, top }
+          }
+          if (best) mark(best.id)
+        }
+
+        // A click marks its target and holds it until the reader scrolls again. The pin has to
+        // outlive the jump's own `scrollend` and the observer callback that follows it, or the
+        // marker falls back to the target's first subsection; a user gesture releases it.
+        let pinned = false
+        let jumping = false
+        const observer = new IntersectionObserver(
+          () => {
+            if (!pinned) sync()
+          },
+          { rootMargin: '0px 0px -75% 0px' },
+        )
+        headings.forEach((h) => observer.observe(h))
+        for (const a of links.values()) {
+          a.addEventListener('click', () => {
+            pinned = true
+            jumping = true
+            mark(a.hash.slice(1))
+          })
+        }
+        for (const type of ['wheel', 'touchstart', 'keydown']) {
+          window.addEventListener(
+            type,
+            () => {
+              pinned = false
+              jumping = false
+            },
+            { passive: true },
+          )
+        }
+        window.addEventListener('scrollend', () => {
+          if (jumping) jumping = false
+          else {
+            pinned = false
+            sync()
+          }
+        })
+      }
+    </script>
   </body>
 </html>
