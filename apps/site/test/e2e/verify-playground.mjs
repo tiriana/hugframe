@@ -7,8 +7,8 @@ import { baseUrl, createReport } from './lib/harness.mjs'
 // a list of knobs. Each of those is asserted here, along with the three defects
 // that were found by hand and are easy to reintroduce: a segmented control that
 // never moves its active pill, a duration written with the wrong unit (which
-// silently makes every morph instant), and a framed composer that cannot send
-// because nothing selected a thread.
+// silently makes every morph instant), and a framed document whose typed state is
+// lost because the frame was remounted instead of morphed.
 const BASE = baseUrl()
 const { check, finish } = createReport('playground: live settings drive the frame')
 
@@ -226,21 +226,19 @@ check(
   JSON.stringify(expanding),
 )
 
-// A framed document that can actually reply: nothing selected a thread used to
-// leave the composer permanently disabled.
+// The framed document keeps its own state across a morph. The playground's promise is
+// that the frame is never remounted, and the state field is the observable proof: it is
+// filled here, while the frame is expanded, and read back after the collapse below. The
+// retired composer could not be replaced one-for-one because the framed document no
+// longer sends; state survival is the claim that survives the redesign.
 const frame = page.frames().find((candidate) => candidate.url().includes('child.html'))
-const composerBefore = await frame.evaluate(() => document.body.innerText.length)
-await frame.getByRole('textbox').first().fill('a message from the suite')
-await frame.getByRole('button', { name: 'Send', exact: true }).click()
-await page.waitForTimeout(600)
-const composer = await frame.evaluate(() => ({
-  echoed: document.body.innerText.includes('a message from the suite'),
-  after: document.body.innerText.length,
-}))
+await frame.locator('#doc-state').fill('a message from the suite')
+await page.waitForTimeout(200)
+const stateFilled = await frame.locator('#doc-state').inputValue()
 check(
-  'a message typed into the framed app can be sent',
-  composer.echoed && composer.after !== composerBefore,
-  JSON.stringify({ ...composer, before: composerBefore }),
+  'the framed document accepts typed state',
+  stateFilled === 'a message from the suite',
+  JSON.stringify({ stateFilled }),
 )
 
 // The framed document must survive every affordance swap: a rebuild would reload
@@ -332,6 +330,12 @@ check(
   'a reachable way back collapses the frame',
   collapsedByDock && collapsed.mode === 'inline',
   JSON.stringify({ clicked: collapsedByDock, mode: collapsed.mode }),
+)
+const stateAfterCollapse = await frame.locator('#doc-state').inputValue()
+check(
+  'the framed document keeps typed state across expand and collapse',
+  stateAfterCollapse === 'a message from the suite',
+  JSON.stringify({ filled: stateFilled, afterCollapse: stateAfterCollapse }),
 )
 
 const resetClicked = await clickReachable('Reset all')

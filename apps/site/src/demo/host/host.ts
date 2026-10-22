@@ -7,7 +7,7 @@ type ColumnCount = 1 | 2 | 3
 
 const BASE_URL = import.meta.env.BASE_URL
 const CHILD_SRC = `${BASE_URL}child.html`
-const STATUS_SRC = `${BASE_URL}child.html?view=status`
+const SECOND_SRC = `${BASE_URL}child.html?view=second`
 const FIXED_HEIGHT = 'clamp(280px, 42vh, 460px)'
 
 const COLUMNS: readonly ColumnCount[] = [1, 2, 3]
@@ -72,7 +72,7 @@ export function mountHost(container: HTMLElement): void {
   let secondary: HugFrameInstance | null = null
 
   const primaryMount = el('div')
-  const statusMount = el('div')
+  const secondMount = el('div')
 
   const heightItem = meterItem('content height')
   const phaseItem = meterItem('phase')
@@ -96,7 +96,7 @@ export function mountHost(container: HTMLElement): void {
 
   const workbenchHead = el('div', { class: 'workbench__head' }, [
     el('div', {}, [
-      el('h2', { text: 'Threads workspace' }),
+      el('h2', { text: 'The frame' }),
       el('p', {
         class: 'workbench__note',
         text: 'Switch the column count and the frame glides to its new width.',
@@ -113,15 +113,15 @@ export function mountHost(container: HTMLElement): void {
     driveRow,
   ])
 
-  const statusHead = el('div', { class: 'side-card__head' }, [el('h3', { text: 'Service status' })])
+  const secondHead = el('div', { class: 'side-card__head' }, [el('h3', { text: 'A second frame' })])
   const sidePanel = el('aside', { class: 'side-panel' }, [
     el('div', { class: 'side-card' }, [
-      statusHead,
+      secondHead,
       el('p', {
         class: 'side-card__note',
         text: 'A second frame on the same page. Only one opens at a time.',
       }),
-      statusMount,
+      secondMount,
     ]),
     el('div', { class: 'side-card' }, [
       el('h3', { text: 'Several frames, one window' }),
@@ -141,11 +141,22 @@ export function mountHost(container: HTMLElement): void {
 
   const main = el('main', {}, [
     el('section', { class: 'lead', attrs: { id: 'top' } }, [
-      el('h1', { text: 'Hugs its content, glides into the whole window.' }),
+      el('h1', { class: 'lead__wordmark', text: 'hugframe' }),
+      el('p', {
+        class: 'lead__tagline',
+        text: 'Iframes. Content fit. Smooth resize. Full window.',
+      }),
       el('p', {
         class: 'lead__body',
-        text: 'The framed document reports its own height, so the frame is exactly as tall as its content — and it stays smooth while that height changes. Expand it and it morphs into a chromeless full-window view without remounting the iframe, so the app inside keeps its state.',
+        text: 'The headless, zero-dependency utility that hugs internal iframe dimensions and transitions smoothly into full-window mode without reloading the document. Lightweight, configurable, and built to integrate with any framework.',
       }),
+      el(
+        'ul',
+        { class: 'chips' },
+        ['Zero Dependencies', 'No Framework Required', 'React Wrapper Available'].map((label) =>
+          el('li', { class: 'chip', text: label }),
+        ),
+      ),
       el('div', { class: 'snippet' }, [codeBlock('npm install hugframe'), codeBlock(USAGE)]),
     ]),
     workbench,
@@ -163,7 +174,7 @@ export function mountHost(container: HTMLElement): void {
   const primary = createHugFrame({
     container: primaryMount,
     src: CHILD_SRC,
-    title: 'Threads workspace',
+    title: 'Framed document',
     minHeight: 220,
     maxHeight: 880,
     initialHeight: 380,
@@ -182,9 +193,9 @@ export function mountHost(container: HTMLElement): void {
   })
 
   secondary = createHugFrame({
-    container: statusMount,
-    src: STATUS_SRC,
-    title: 'Service status',
+    container: secondMount,
+    src: SECOND_SRC,
+    title: 'Second framed document',
     minHeight: 160,
     maxHeight: 460,
     initialHeight: 220,
@@ -246,20 +257,20 @@ export function mountHost(container: HTMLElement): void {
   })
   heightRow.append(hugButton, fixedButton)
 
-  const statusExpand = el('button', {
+  const secondExpand = el('button', {
     class: 'btn',
     attrs: { type: 'button' },
     text: 'Expand',
     on: { click: () => secondary?.expand() },
   })
-  statusHead.append(statusExpand)
+  secondHead.append(secondExpand)
 
   driveRow.append(
     el('button', {
       class: 'btn',
       attrs: { type: 'button' },
-      text: 'Add a thread',
-      on: { click: () => primary.sendMessage({ action: 'add-thread' }) },
+      text: 'Grow the content',
+      on: { click: () => primary.sendMessage({ action: 'grow' }) },
     }),
   )
 

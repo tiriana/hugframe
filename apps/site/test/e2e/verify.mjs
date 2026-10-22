@@ -86,7 +86,7 @@ await page.screenshot({ path: `${shots}/01-inline.png`, fullPage: false })
 //    so any content overflow is clipped and lasts only the report round-trip
 const growthSamples = []
 const startedAt = Date.now()
-await page.getByRole('button', { name: 'Add a thread' }).click()
+await page.getByRole('button', { name: 'Grow the content' }).click()
 for (let i = 0; i < 30; i++) {
   growthSamples.push({ ...(await snap()), t: Date.now() - startedAt })
   await page.waitForTimeout(16)
@@ -128,48 +128,47 @@ check(
   JSON.stringify(settled),
 )
 
-// 3. composer appends a message into the framed app
-const frame = page.frameLocator('iframe[title="Threads workspace"]')
-await frame.locator('button.thread').first().click()
-await frame.locator('input[aria-label="Write a reply"]').fill('Rolling the fix to staging now')
-const sendDisabled = await frame.locator('button.composer__send').isEnabled()
-await frame.locator('button.composer__send').click()
+// 3. the framed document states what it is, carries typed state, and grows again.
+//    The retired composer drove growth from inside the frame; the framed document no
+//    longer sends, so the state field replaces the message and the host drive button
+//    replaces the composer as the second growth source.
+const frame = page.frameLocator('iframe[title="Framed document"]')
+const statement = (await frame.locator('.doc__say').innerText()).trim()
+check(
+  'document: the primary view states that it is in an iframe',
+  statement === 'This is in an iframe',
+  `statement=${JSON.stringify(statement)}`,
+)
+const framedShell = await frame.locator('.child-shell').evaluate((node) => ({
+  framed: node.getAttribute('data-framed'),
+  view: node.getAttribute('data-view'),
+}))
+check(
+  'document: the child shell reports the doc view and that it is framed',
+  framedShell.framed === 'true' && framedShell.view === 'doc',
+  JSON.stringify(framedShell),
+)
+await frame.locator('#doc-state').fill('Rolling the fix to staging now')
+const typed = await frame.locator('#doc-state').inputValue()
+check(
+  'state: the framed document accepts typed state',
+  typed === 'Rolling the fix to staging now',
+  `value=${JSON.stringify(typed)}`,
+)
+await page.getByRole('button', { name: 'Grow the content' }).click()
 await page.waitForTimeout(600)
-const messages = frame.locator('li.message')
-const appended = await messages.last().innerText()
-const previewText = await frame.locator('button.thread').first().innerText()
+const afterSecondGrow = await snap()
 check(
-  'composer: Send is enabled once a thread is selected',
-  sendDisabled,
-  `enabled=${sendDisabled}`,
+  'growth: a second block grows the frame further',
+  afterSecondGrow.frameH > grew + (inline.frameH ?? 0) - 1,
+  `frameH=${afterSecondGrow.frameH} overflowPx=${afterSecondGrow.overflowPx}`,
 )
 check(
-  'composer: message is appended to the conversation',
-  appended.includes('Rolling the fix to staging now'),
-  appended.replace(/\n/g, ' | '),
+  'growth: no overflow after a second growth',
+  (afterSecondGrow.overflowPx ?? 1) <= 0,
+  `overflowPx=${afterSecondGrow.overflowPx}`,
 )
-check(
-  'composer: appended message is attributed to You',
-  appended.includes('You'),
-  appended.replace(/\n/g, ' | '),
-)
-check(
-  'composer: row preview updates',
-  previewText.includes('Rolling the fix to staging now'),
-  previewText.replace(/\n/g, ' | '),
-)
-const afterSend = await snap()
-check(
-  'composer: frame grew to fit the new message',
-  afterSend.frameH > grew + (inline.frameH ?? 0) - 1,
-  `frameH=${afterSend.frameH} overflowPx=${afterSend.overflowPx}`,
-)
-check(
-  'composer: no overflow after growth',
-  (afterSend.overflowPx ?? 1) <= 0,
-  `overflowPx=${afterSend.overflowPx}`,
-)
-await page.screenshot({ path: `${shots}/02-inline-after-send.png` })
+await page.screenshot({ path: `${shots}/02-inline-after-grow.png` })
 
 // 4. expand from inside the framed document
 await frame.locator('button[aria-label="Expand to the full window"]').click()
@@ -242,10 +241,11 @@ check(
   Math.abs((collapsed.frameH ?? 0) - (collapsed.childRect ?? -1)) <= 0.5,
   JSON.stringify(collapsed),
 )
+const survivedValue = await frame.locator('#doc-state').inputValue()
 check(
-  'collapse: framed app kept its state across the morph',
-  (await frame.locator('li.message').last().innerText()).includes('Rolling the fix to staging now'),
-  'message survived expand/collapse',
+  'collapse: framed document kept its typed state across the morph',
+  survivedValue === 'Rolling the fix to staging now',
+  `value=${JSON.stringify(survivedValue)}`,
 )
 
 // 6. host-driven expand + single-frame exclusivity
@@ -258,6 +258,14 @@ check(
   second.phase === 'idle' && Math.abs((second.boxRect?.h ?? 0) - second.vh) <= 1,
   JSON.stringify(second.boxRect),
 )
+const secondStatement = (
+  await page.frameLocator('iframe[title="Second framed document"]').locator('.doc__say').innerText()
+).trim()
+check(
+  'document: the second view states that it is in an iframe too',
+  secondStatement === 'This is in an iframe too',
+  `statement=${JSON.stringify(secondStatement)}`,
+)
 check(
   'exclusivity: the other frame collapsed itself',
   firstWhileSecondExpanded.mode === 'inline' && firstWhileSecondExpanded.phase === 'idle',
@@ -267,7 +275,43 @@ await page.screenshot({ path: `${shots}/06-second-expanded.png` })
 await page.keyboard.press('Escape')
 await page.waitForTimeout(900)
 
-// 7. narrow viewport
+// 7. the demo must never scroll sideways, at rest or while a column change is in
+//    flight: the width transition is the one moment a rounding error could overflow.
+const sidewaysGap = () =>
+  page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+
+const gapAtRest = async (width) => {
+  await page.setViewportSize({ width, height: 900 })
+  await page.waitForTimeout(700)
+  return await sidewaysGap()
+}
+
+const worstGapDuringColumnChange = async (width) => {
+  await page.setViewportSize({ width, height: 900 })
+  await page.waitForTimeout(700)
+  await page.getByRole('button', { name: /^1 col/i }).click()
+  await page.waitForTimeout(500)
+  await page.getByRole('button', { name: /^3 col/i }).click()
+  const samples = []
+  for (let i = 0; i < 40; i += 1) {
+    samples.push(await sidewaysGap())
+    await page.waitForTimeout(16)
+  }
+  samples.push(await sidewaysGap())
+  return Math.max(...samples)
+}
+
+for (const width of [1440, 1024, 420]) {
+  const gap = await gapAtRest(width)
+  check(`sideways: no horizontal overflow at ${width}`, gap <= 0, `scrollWidth-innerWidth=${gap}`)
+}
+
+for (const width of [1440, 1024]) {
+  const worst = await worstGapDuringColumnChange(width)
+  check(`sideways: none mid-glide at ${width}`, worst <= 0, `worst scrollWidth-innerWidth=${worst}`)
+}
+
+// 8. narrow viewport
 await page.setViewportSize({ width: 420, height: 820 })
 await page.waitForTimeout(700)
 const narrow = await snap()
@@ -297,7 +341,7 @@ check(
 )
 await page.screenshot({ path: `${shots}/08-narrow-expanded.png` })
 
-// 8. standalone child document
+// 9. standalone child document
 const standalone = await browser.newPage({
   viewport: { width: 900, height: 800 },
   deviceScaleFactor: 2,
@@ -308,8 +352,20 @@ await standalone.goto(`${BASE}/child.html`, { waitUntil: 'load' })
 await standalone.waitForTimeout(1200)
 check(
   'standalone: renders without a host',
-  await standalone.locator('.thread-app').isVisible(),
-  'thread app visible',
+  await standalone.locator('.doc').isVisible(),
+  'document view visible',
+)
+const standaloneShell = await standalone.locator('.child-shell').evaluate((node) => ({
+  framed: node.getAttribute('data-framed'),
+  view: node.getAttribute('data-view'),
+  mode: node.getAttribute('data-mode'),
+}))
+check(
+  'standalone: the child shell reports the doc view and that it is unframed',
+  standaloneShell.framed === 'false' &&
+    standaloneShell.view === 'doc' &&
+    standaloneShell.mode === 'inline',
+  JSON.stringify(standaloneShell),
 )
 check(
   'standalone: shows the preview note',

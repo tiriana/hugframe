@@ -9,20 +9,57 @@
   max-width: 720px;
 }
 
-.lead h1 {
+/* The wordmark is a serif logotype — the header brand is mono, so the two do not
+   read as the same mark twice. The tagline below carries the message. */
+.lead__wordmark {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(32px, 5.2vw, 52px);
-  line-height: 1.08;
+  font-size: clamp(28px, 4vw, 38px);
+  line-height: 1;
   letter-spacing: -0.01em;
 }
 
+.lead__wordmark::after {
+  content: '.';
+  color: var(--accent);
+}
+
+.lead__tagline {
+  margin: 14px 0 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(34px, 6.2vw, 60px);
+  line-height: 1.03;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
 .lead__body {
-  margin: 20px 0 0;
+  margin: 22px 0 0;
   font-size: 18px;
   color: var(--muted);
   max-width: 60ch;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
 }
 
 .snippet {

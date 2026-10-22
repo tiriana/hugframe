@@ -37,18 +37,14 @@ const snap = () =>
       childOverflowY: de ? win.getComputedStyle(de).overflowY : null,
       childArrangement: (() => {
         if (!d) return null
-        const list = d.querySelector('.list-col')
-        const conversation = d.querySelector('.conversation')
-        if (!list || !conversation) return 'no-conversation'
+        const framePanel = d.querySelector('.panel--frame')
+        const contentPanel = d.querySelector('.panel--content')
+        if (!framePanel || !contentPanel) return 'no-split'
         return Math.abs(
-          list.getBoundingClientRect().top - conversation.getBoundingClientRect().top,
+          framePanel.getBoundingClientRect().top - contentPanel.getBoundingClientRect().top,
         ) < 4
           ? 'side-by-side'
           : 'stacked'
-      })(),
-      childWorkspaceDisplay: (() => {
-        const w = d && win ? d.querySelector('.workspace') : null
-        return w ? win.getComputedStyle(w).display : null
       })(),
       overflowPx: de ? de.scrollHeight - de.clientHeight : null,
       gutter: de ? win.innerWidth - de.clientWidth : null,
@@ -66,12 +62,6 @@ const click = async (re) => {
 }
 
 // ---- A. host layout change: 1 column -> 3 columns ----
-await page
-  .frameLocator('iframe[title="Threads workspace"]')
-  .locator('button.thread')
-  .first()
-  .click()
-await page.waitForTimeout(500)
 await click(/^1 col/i)
 await page.waitForTimeout(900)
 const wide = await snap()
@@ -115,7 +105,7 @@ check(
 check(
   'layout: the framed app reflows with its container',
   wide.childArrangement === 'stacked' && narrow.childArrangement === 'side-by-side',
-  `1col=${wide.childArrangement} 3col=${narrow.childArrangement} displays=${wide.childWorkspaceDisplay}/${narrow.childWorkspaceDisplay}`,
+  `1col=${wide.childArrangement} 3col=${narrow.childArrangement}`,
 )
 check(
   'layout: no overflow window beyond two frames',
@@ -165,7 +155,7 @@ check(
   (fixed.childScrollH ?? 0) > (fixed.childClientH ?? 0),
   `scroll=${fixed.childScrollH} client=${fixed.childClientH}`,
 )
-await click(/add a thread/i)
+await click(/grow the content/i)
 await page.waitForTimeout(900)
 const fixedAfterGrowth = await snap()
 check(
