@@ -16,6 +16,7 @@ export interface DocApp {
 }
 
 const MAX_BLOCKS = 8
+const MAX_STATE_HEIGHT = 160
 
 export function createDoc(host: DocAppHost): DocApp {
   const modeButton = createModeButton(host.child)
@@ -52,18 +53,25 @@ export function createDoc(host: DocAppHost): DocApp {
     split,
   ])
 
-  const input = el('input', {
+  const state = el('textarea', {
     class: 'doc__input',
-    attrs: { type: 'text', id: 'doc-state', placeholder: 'Type here, then expand and collapse' },
+    attrs: { id: 'doc-state', rows: '1', placeholder: 'Type here…' },
+    on: { input: autosizeState },
   })
   const field = el('div', { class: 'doc__field' }, [
     el('label', {
       class: 'doc__label',
       attrs: { for: 'doc-state' },
-      text: 'What you type stays put.',
+      text: 'Type something, then expand. The text is still there afterwards — the same document, never reloaded.',
     }),
-    input,
+    state,
   ])
+
+  function autosizeState(): void {
+    state.style.height = 'auto'
+    const borders = state.offsetHeight - state.clientHeight
+    state.style.height = `${Math.min(state.scrollHeight + borders, MAX_STATE_HEIGHT)}px`
+  }
 
   const root = el('div', { class: 'doc', dataset: { mode: 'inline' } }, [appBar, body, field])
 

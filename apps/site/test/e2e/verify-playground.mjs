@@ -232,7 +232,8 @@ check(
 // retired composer could not be replaced one-for-one because the framed document no
 // longer sends; state survival is the claim that survives the redesign.
 const frame = page.frames().find((candidate) => candidate.url().includes('child.html'))
-await frame.locator('#doc-state').fill('a message from the suite')
+await frame.locator('#doc-state').focus()
+await page.keyboard.type('a message from the suite')
 await page.waitForTimeout(200)
 const stateFilled = await frame.locator('#doc-state').inputValue()
 check(
