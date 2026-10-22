@@ -20,7 +20,8 @@ The App path engages once all of this exists:
 
 1. A GitHub App installed on this repository with **Contents: write**, **Pull requests: write** and
    **Issues: write**.
-2. The repository variable `RELEASE_APP_ID` and the repository secret `RELEASE_APP_PRIVATE_KEY`.
+2. The repository variable `RELEASE_APP_CLIENT_ID`, holding the App's **Client ID**, and the repository
+   secret `RELEASE_APP_PRIVATE_KEY`, holding its private key.
 3. **Allow auto-merge** enabled in the repository settings (`allow_auto_merge`).
 
 Until then the workflow falls back to `GITHUB_TOKEN` (`steps.app-token.outputs.token || secrets.GITHUB_TOKEN`),
