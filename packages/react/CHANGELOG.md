@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.3](https://github.com/tiriana/hugframe/compare/react-v0.1.2...react-v0.1.3) (2026-10-22)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * hugframe bumped from ^3.0.0 to ^3.1.0
+
 ## [0.1.2](https://github.com/tiriana/hugframe/compare/react-v0.1.1...react-v0.1.2) (2026-10-22)
 
 
